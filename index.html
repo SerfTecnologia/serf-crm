@@ -7,6 +7,8 @@
 <link rel="icon" type="image/png" sizes="256x256" href="logo_icon.png">
 <!-- CSS carregado via Supabase Edge Functions -->
 <link rel="stylesheet" href="https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1/crm-css">
+<!-- Supabase JS SDK (necessário antes do crm-js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div id="crm-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0C447C;color:#fff;font-family:sans-serif;font-size:14px;flex-direction:column;gap:12px">
@@ -19,9 +21,7 @@
   const BASE = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
   try {
     // Carrega o HTML body
-    const [htmlRes] = await Promise.all([
-      fetch(BASE + '/crm-html')
-    ]);
+    const htmlRes = await fetch(BASE + '/crm-html');
     if (!htmlRes.ok) throw new Error('Falha ao carregar interface');
     const html = await htmlRes.text();
     // Injeta o HTML no body (substitui loading)
@@ -29,7 +29,7 @@
     const container = document.createElement('div');
     container.innerHTML = html;
     while (container.firstChild) document.body.appendChild(container.firstChild);
-    // Carrega o JS principal
+    // Carrega o JS principal (supabase SDK já está disponível via <script> no <head>)
     const script = document.createElement('script');
     script.src = BASE + '/crm-js';
     script.async = false;
