@@ -5,37 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Serf Tecnologia CRM</title>
 <link rel="icon" type="image/png" sizes="256x256" href="logo_icon.png">
-<!-- CSS carregado via Supabase Edge Functions -->
 <link rel="stylesheet" href="https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1/crm-css">
-<!-- Supabase JS SDK (necessário antes do crm-js) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div id="crm-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0C447C;color:#fff;font-family:sans-serif;font-size:14px;flex-direction:column;gap:12px">
   <img src="logo_serf.png" alt="Serf" style="max-width:180px;opacity:.9">
   <div style="opacity:.7">Carregando CRM...</div>
 </div>
-<!-- HTML do app carregado dinamicamente -->
+
+<!-- 1. SDK do Supabase carregado primeiro (SÍNCRONO) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- 2. jsPDF para geração de contratos -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script>
 (async function() {
   const BASE = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
+  const loading = document.getElementById('crm-loading');
+
   try {
-    // Carrega o HTML body
+    // Carrega HTML body das Edge Functions
     const htmlRes = await fetch(BASE + '/crm-html');
-    if (!htmlRes.ok) throw new Error('Falha ao carregar interface');
+    if (!htmlRes.ok) throw new Error('Falha ao carregar interface (' + htmlRes.status + ')');
     const html = await htmlRes.text();
-    // Injeta o HTML no body (substitui loading)
-    document.getElementById('crm-loading').style.display = 'none';
+
+    // Injeta o HTML no body
+    loading.style.display = 'none';
     const container = document.createElement('div');
     container.innerHTML = html;
     while (container.firstChild) document.body.appendChild(container.firstChild);
-    // Carrega o JS principal (supabase SDK já está disponível via <script> no <head>)
+
+    // Carrega o JS principal como módulo inline para garantir execução após DOM pronto
+    const jsRes = await fetch(BASE + '/crm-js');
+    if (!jsRes.ok) throw new Error('Falha ao carregar JS (' + jsRes.status + ')');
+    const jsText = await jsRes.text();
+
+    // Executa o JS via Blob URL para ter stack traces corretos
+    const blob = new Blob([jsText], {type: 'application/javascript'});
+    const url = URL.createObjectURL(blob);
     const script = document.createElement('script');
-    script.src = BASE + '/crm-js';
-    script.async = false;
+    script.src = url;
+    script.onload = () => URL.revokeObjectURL(url);
+    script.onerror = (e) => {
+      console.error('Erro ao executar CRM JS:', e);
+      loading.style.display = 'flex';
+      loading.innerHTML = '<div style="color:#fff;text-align:center"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div>Erro ao inicializar o CRM</div><div style="font-size:12px;opacity:.7;margin-top:4px">Verifique o console para detalhes</div></div>';
+    };
     document.body.appendChild(script);
+
   } catch(e) {
-    document.getElementById('crm-loading').innerHTML = '<div style="color:#fff;text-align:center"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div>Erro ao carregar o CRM</div><div style="font-size:12px;opacity:.7;margin-top:4px">' + e.message + '</div></div>';
+    console.error('Erro ao carregar CRM:', e);
+    loading.innerHTML = '<div style="color:#fff;text-align:center"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div>Erro ao carregar o CRM</div><div style="font-size:12px;opacity:.7;margin-top:4px">' + e.message + '</div></div>';
   }
 })();
 </script>
