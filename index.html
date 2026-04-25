@@ -15,17 +15,18 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   #error-panel{display:none;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:24px;max-width:520px;width:100%;text-align:left}
   #error-panel h3{font-size:15px;margin-bottom:10px;color:#ffcc00}
-  .error-msg{font-size:11px;opacity:.9;line-height:1.6;margin-bottom:14px;background:rgba(0,0,0,.3);padding:10px 12px;border-radius:6px;font-family:monospace;word-break:break-all;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+  .error-msg{font-size:11px;line-height:1.6;margin-bottom:14px;background:rgba(0,0,0,.3);padding:10px 12px;border-radius:6px;font-family:monospace;word-break:break-all;white-space:pre-wrap;max-height:200px;overflow-y:auto}
   .diag-list{font-size:12px;opacity:.75;list-style:none;margin-bottom:14px}
   .diag-list li{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;gap:8px}
-  .s-ok{color:#4ade80;font-weight:600;white-space:nowrap}
-  .s-fail{color:#f87171;font-weight:600;white-space:nowrap}
+  .s-ok{color:#4ade80;font-weight:600}
+  .s-fail{color:#f87171;font-weight:600}
   .btn-retry{background:#fff;color:#0C447C;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
 </style>
 </head>
 <body>
+
 <div id="crm-loading">
-  <img src="logo_serf.png" alt="Serf" onerror="this.style.display='none'">
+  <img src="logo_serf.png" alt="Serf Tecnologia" onerror="this.style.display='none'">
   <div class="spinner" id="spinner"></div>
   <div class="loading-text" id="loading-text">Conectando ao CRM...</div>
   <div id="error-panel">
@@ -36,12 +37,18 @@
   </div>
 </div>
 
+<!--
+  ORDEM CRÍTICA:
+  1. Supabase SDK  → define window.supabase
+  2. jsPDF         → define window.jspdf / window.jsPDF
+  3. Nosso loader  → busca crm-css, crm-html, crm-js e executa na ordem certa
+-->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-var BASE = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
-var TIMEOUT = 25000;
+var BASE    = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
+var TIMEOUT = 20000;
 
 function $id(id){ return document.getElementById(id); }
 function setTxt(id,v){ $id(id).textContent = v; }
@@ -61,15 +68,15 @@ function showError(msg, diags){
 }
 
 function resetUI(){
-  $id('error-panel').style.display = 'none';
-  $id('spinner').style.display = '';
+  $id('error-panel').style.display  = 'none';
+  $id('spinner').style.display      = '';
   $id('loading-text').style.display = '';
-  $id('crm-loading').style.display = 'flex';
+  $id('crm-loading').style.display  = 'flex';
 }
 
-function fetchSafe(url, label, diags){
+function fetchTexto(url, label, diags){
   return new Promise(function(resolve, reject){
-    var ctrl = new AbortController();
+    var ctrl  = new AbortController();
     var timer = setTimeout(function(){ ctrl.abort(); }, TIMEOUT);
     fetch(url, { signal: ctrl.signal })
       .then(function(res){
@@ -77,218 +84,100 @@ function fetchSafe(url, label, diags){
         if(!res.ok){
           return res.text().catch(function(){ return ''; }).then(function(body){
             diags.push({ label:label, ok:false, status:'HTTP '+res.status });
-            reject(new Error('['+label+'] HTTP '+res.status+(body?'\n'+body.slice(0,150):'')));
+            reject(new Error('['+label+'] HTTP '+res.status+(body?': '+body.slice(0,100):'')));
           });
         }
         diags.push({ label:label, ok:true, status:'OK' });
-        resolve(res);
+        return res.text();
       })
+      .then(function(text){ if(text !== undefined) resolve(text); })
       .catch(function(e){
         clearTimeout(timer);
-        if(e.name === 'AbortError'){
+        if(e.name==='AbortError'){
           diags.push({ label:label, ok:false, status:'Timeout' });
           reject(new Error('['+label+'] Timeout de '+(TIMEOUT/1000)+'s'));
         } else {
-          diags.push({ label:label, ok:false, status:e.message.slice(0,40) });
+          if(!diags.find(function(d){ return d.label===label; }))
+            diags.push({ label:label, ok:false, status:e.message.slice(0,40) });
           reject(e);
         }
       });
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOTOR DE EXECUÇÃO DO CRM-JS
-//
-// O problema: o crm-js foi escrito para rodar como Edge Function (Deno),
-// onde o arquivo inteiro é o corpo de uma função assíncrona.
-// Por isso tem `return` no topo do escopo e declarações `function`.
-//
-// Estratégias em ordem de prioridade:
-//
-// 1. MÓDULO com preâmbulo completo
-//    - `type="module"` aceita top-level await E torna `return` inválido mas
-//      reescrevemos os returns isolados
-//    - Funções declaradas com `function foo()` ficam no escopo do módulo,
-//      então as movemos para `globalThis.foo =`
-//
-// 2. WRAPPER FUNCTION via iframe
-//    - Cria um iframe, injeta o JS dentro de uma função async
-//    - O iframe compartilha o mesmo DOM (via parent)
-//    - Garante escopo limpo sem afetar o documento principal
-//
-// 3. PATCH DIRETO
-//    - Remove/substitui `return` standalone no escopo global
-//    - Executa via blob script normal
-// ─────────────────────────────────────────────────────────────────────────────
-
-function patchJS(code) {
-  // 1. Expõe funções declaradas para o escopo global
-  //    `function foo(` → `globalThis.foo = function foo(`
-  //    mas NÃO dentro de outra função (evita double-assign)
-  var patched = code;
-
-  // 2. Remove `return;` e `return valor;` que estão no nível 0 de indentação
-  //    (começo da linha, sem espaço, sem estar dentro de { })
-  //    Substitui por comentário para não quebrar a lógica de controle de fluxo
-  patched = patched.replace(/^return(\s+[^;\n]+)?;?\s*$/gm, '/* return_removido */');
-
-  return patched;
-}
-
-function estrategia1_modulo(code) {
+// Injeta script via Blob e aguarda onload
+function injectScript(code, tipo){
   return new Promise(function(resolve, reject){
-    try {
-      // Transforma declarações `function nome(` em `globalThis.nome = function nome(`
-      var modCode = code.replace(
-        /^(\s*)function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/gm,
-        function(m, sp, nome){
-          return sp + 'globalThis["'+nome+'"] = function '+nome+'(';
-        }
-      );
-
-      // Remove returns no topo do escopo
-      modCode = modCode.replace(/^return(\s+[^;\n]+)?;?\s*$/gm, '/* top-level return */');
-
-      // Preâmbulo para garantir que globals do index estejam disponíveis no módulo
-      var pre = [
-        'const window=globalThis,document=globalThis.document;',
-        'const supabase=globalThis.supabase;',
-        'const jsPDF=globalThis.jsPDF||(globalThis.jspdf&&globalThis.jspdf.jsPDF);',
-        ''
-      ].join('\n');
-
-      var blob = new Blob([pre + modCode], {type:'application/javascript'});
-      var url = URL.createObjectURL(blob);
-      var s = document.createElement('script');
-      s.type = 'module';
-      s.src = url;
-      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
-      s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Módulo falhou')); };
-      document.head.appendChild(s);
-    } catch(e) { reject(e); }
+    var blob   = new Blob([code], {type:'application/javascript'});
+    var url    = URL.createObjectURL(blob);
+    var s      = document.createElement('script');
+    if(tipo) s.type = tipo;
+    s.src = url;
+    s.onload  = function(){ URL.revokeObjectURL(url); resolve(); };
+    s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Erro ao executar script')); };
+    document.body.appendChild(s);
   });
 }
 
-function estrategia2_wrapper(code) {
-  return new Promise(function(resolve, reject){
-    try {
-      var patched = patchJS(code);
-
-      // Injeta como script com wrapper function que torna `return` válido
-      // e expõe tudo para window via with(window)
-      var wrapped =
-        '(function(){\n' +
-        '"use strict";\n' +
-        // Redefine `return` de topo como throw para interromper o fluxo
-        // sem quebrar outras returns dentro de funções
-        patched +
-        '\n})();';
-
-      var blob = new Blob([wrapped], {type:'application/javascript'});
-      var url = URL.createObjectURL(blob);
-      var s = document.createElement('script');
-      s.src = url;
-      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
-      s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Wrapper falhou: '+e)); };
-      document.body.appendChild(s);
-    } catch(e) { reject(e); }
-  });
-}
-
-function estrategia3_eval(code) {
-  return new Promise(function(resolve, reject){
-    try {
-      var patched = patchJS(code);
-      // eval no escopo global coloca function declarations em window
-      (0, eval)(patched);
-      resolve();
-    } catch(e) { reject(e); }
-  });
-}
-
-function estrategia4_blob_simples(code) {
-  // Último recurso: remove todos os returns do topo e executa direto
-  return new Promise(function(resolve, reject){
-    try {
-      var fixed = code
-        .replace(/^return\s*;?\s*$/gm, '')
-        .replace(/^return\s+\S[^\n]*$/gm, '');
-      var blob = new Blob([fixed], {type:'application/javascript'});
-      var url = URL.createObjectURL(blob);
-      var s = document.createElement('script');
-      s.src = url;
-      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
-      s.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Blob simples falhou')); };
-      document.body.appendChild(s);
-    } catch(e) { reject(e); }
-  });
-}
-
-async function executarJS(js, diags) {
-  var estrategias = [
-    { nome: 'módulo ES', fn: estrategia1_modulo },
-    { nome: 'wrapper function', fn: estrategia2_wrapper },
-    { nome: 'eval global', fn: estrategia3_eval },
-    { nome: 'blob direto', fn: estrategia4_blob_simples },
-  ];
-
-  var erros = [];
-  for (var i = 0; i < estrategias.length; i++) {
-    var e = estrategias[i];
-    try {
-      await e.fn(js);
-      diags.push({ label: 'execução JS ('+e.nome+')', ok: true, status: 'OK' });
-      console.log('[Serf CRM] JS executado via: ' + e.nome);
-      return; // sucesso
-    } catch(err) {
-      console.warn('[Serf CRM] ' + e.nome + ' falhou:', err.message);
-      erros.push(e.nome + ': ' + err.message);
-    }
-  }
-
-  diags.push({ label: 'execução JS', ok: false, status: 'Todas falharam' });
-  throw new Error('Nenhuma estratégia funcionou:\n' + erros.join('\n'));
-}
-
-async function carregarCRM() {
+async function carregarCRM(){
   var diags = [];
   resetUI();
 
   try {
-    // CSS em paralelo
-    setTxt('loading-text', 'Carregando estilos...');
-    fetch(BASE + '/crm-css').then(function(r){
-      if(!r.ok) return;
-      return r.text();
-    }).then(function(css){
-      if(!css) return;
-      var style = document.createElement('style');
-      style.textContent = css;
-      document.head.appendChild(style);
-    }).catch(function(){});
 
-    // HTML
+    // ── 1. CSS (paralelo, não bloqueia) ──────────────────────────────────────
+    setTxt('loading-text', 'Carregando estilos...');
+    fetch(BASE+'/crm-css')
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(css){
+        if(!css) return;
+        var el = document.createElement('style');
+        el.textContent = css;
+        document.head.appendChild(el);
+      })
+      .catch(function(){});
+
+    // ── 2. HTML ───────────────────────────────────────────────────────────────
     setTxt('loading-text', 'Carregando interface...');
-    var htmlRes = await fetchSafe(BASE + '/crm-html', 'crm-html', diags);
-    var html = await htmlRes.text();
+    var html = await fetchTexto(BASE+'/crm-html', 'crm-html', diags);
     if(!html || html.trim().length < 20) throw new Error('[crm-html] Resposta vazia');
 
     var wrap = document.createElement('div');
     wrap.innerHTML = html;
     while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
 
-    // JS
+    // ── 3. JS ─────────────────────────────────────────────────────────────────
+    // O crm-js usa `supabase.createClient(...)` no topo do arquivo.
+    // Para que isso funcione, o SDK do Supabase (já carregado acima como script
+    // síncrono) precisa estar exposto como `supabase` no escopo global.
+    //
+    // window.supabase já é definido pelo SDK como o objeto do módulo inteiro.
+    // O crm-js chama `supabase.createClient(...)` — isso funciona direto.
+    //
+    // Executamos o JS como script normal (não módulo) via Blob URL para que:
+    //   • Declarações `function foo()` fiquem globais (acessíveis como window.foo)
+    //   • `const sb = supabase.createClient(...)` encontre window.supabase
+    //   • `await` dentro de async functions funcione normalmente
+    //
     setTxt('loading-text', 'Inicializando CRM...');
-    var jsRes = await fetchSafe(BASE + '/crm-js', 'crm-js', diags);
-    var js = await jsRes.text();
+    var js = await fetchTexto(BASE+'/crm-js', 'crm-js', diags);
     if(!js || js.trim().length < 20) throw new Error('[crm-js] Resposta vazia');
 
-    // Oculta loading
+    // Esconde loading antes de executar (o JS vai mostrar a tela de login)
     $id('crm-loading').style.display = 'none';
 
-    await executarJS(js, diags);
+    // Executa como script clássico — sem `type="module"` — para manter
+    // declarações de função no escopo global
+    await injectScript(js);
 
-  } catch(e) {
+    // Chama init() se existir (o crm-js provavelmente define e chama init())
+    // mas não forçamos: se o JS já chama init() internamente, não chamamos de novo
+    if(typeof init === 'function' && !window.__crmInitCalled){
+      window.__crmInitCalled = true;
+      init();
+    }
+
+  } catch(e){
     console.error('[Serf CRM]', e);
     $id('crm-loading').style.display = 'flex';
     showError(e.message, diags);
