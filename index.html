@@ -6,50 +6,26 @@
 <title>Serf Tecnologia CRM</title>
 <link rel="icon" type="image/png" sizes="256x256" href="logo_icon.png">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0C447C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
-  #crm-loading {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; flex-direction: column; gap: 16px;
-    color: #fff; padding: 24px;
-  }
-  #crm-loading img { max-width: 180px; opacity: 0.9; }
-  .loading-text { opacity: 0.75; font-size: 14px; }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 3px solid rgba(255,255,255,0.2);
-    border-top-color: #fff; border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #error-panel {
-    display: none; background: rgba(0,0,0,0.35);
-    border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-    padding: 24px; max-width: 520px; width: 100%; text-align: left;
-  }
-  #error-panel h3 { font-size: 15px; margin-bottom: 10px; color: #ffcc00; }
-  .error-msg {
-    font-size: 11px; opacity: 0.9; line-height: 1.6; margin-bottom: 14px;
-    background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 6px;
-    font-family: monospace; word-break: break-all; white-space: pre-wrap;
-    max-height: 180px; overflow-y: auto;
-  }
-  .diag-list { font-size: 12px; opacity: 0.75; list-style: none; margin-bottom: 14px; }
-  .diag-list li { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: space-between; gap:8px; }
-  .s-ok   { color: #4ade80; font-weight: 600; white-space:nowrap; }
-  .s-fail { color: #f87171; font-weight: 600; white-space:nowrap; }
-  .btn-retry {
-    background: #fff; color: #0C447C; border: none; border-radius: 8px;
-    padding: 10px 24px; font-size: 14px; font-weight: 600;
-    cursor: pointer; width: 100%;
-  }
-  .btn-retry:hover { opacity: 0.85; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0C447C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+  #crm-loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;color:#fff;padding:24px}
+  #crm-loading img{max-width:180px;opacity:.9}
+  .loading-text{opacity:.75;font-size:14px}
+  .spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #error-panel{display:none;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:24px;max-width:520px;width:100%;text-align:left}
+  #error-panel h3{font-size:15px;margin-bottom:10px;color:#ffcc00}
+  .error-msg{font-size:11px;opacity:.9;line-height:1.6;margin-bottom:14px;background:rgba(0,0,0,.3);padding:10px 12px;border-radius:6px;font-family:monospace;word-break:break-all;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+  .diag-list{font-size:12px;opacity:.75;list-style:none;margin-bottom:14px}
+  .diag-list li{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;gap:8px}
+  .s-ok{color:#4ade80;font-weight:600;white-space:nowrap}
+  .s-fail{color:#f87171;font-weight:600;white-space:nowrap}
+  .btn-retry{background:#fff;color:#0C447C;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
 </style>
 </head>
 <body>
-
 <div id="crm-loading">
-  <img src="logo_serf.png" alt="Serf Tecnologia" onerror="this.style.display='none'">
+  <img src="logo_serf.png" alt="Serf" onerror="this.style.display='none'">
   <div class="spinner" id="spinner"></div>
   <div class="loading-text" id="loading-text">Conectando ao CRM...</div>
   <div id="error-panel">
@@ -60,194 +36,261 @@
   </div>
 </div>
 
-<!-- Dependências globais carregadas de forma síncrona -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-const BASE    = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
-const TIMEOUT = 25000;
+var BASE = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
+var TIMEOUT = 25000;
 
-function ui(id)     { return document.getElementById(id); }
-function txt(id, v) { ui(id).textContent = v; }
+function $id(id){ return document.getElementById(id); }
+function setTxt(id,v){ $id(id).textContent = v; }
 
-function showError(msg, diags) {
-  ui('spinner').style.display      = 'none';
-  ui('loading-text').style.display = 'none';
-  ui('error-msg').textContent      = msg;
-  const list = ui('diag-list');
+function showError(msg, diags){
+  $id('spinner').style.display = 'none';
+  $id('loading-text').style.display = 'none';
+  $id('error-msg').textContent = msg;
+  var list = $id('diag-list');
   list.innerHTML = '';
-  (diags||[]).forEach(function(d) {
-    const li = document.createElement('li');
-    li.innerHTML = '<span>' + d.label + '</span><span class="' + (d.ok?'s-ok':'s-fail') + '">' + (d.ok?'✓ ':'✗ ') + d.status + '</span>';
+  (diags||[]).forEach(function(d){
+    var li = document.createElement('li');
+    li.innerHTML = '<span>'+d.label+'</span><span class="'+(d.ok?'s-ok':'s-fail')+'">'+(d.ok?'✓ ':'✗ ')+d.status+'</span>';
     list.appendChild(li);
   });
-  ui('error-panel').style.display = 'block';
+  $id('error-panel').style.display = 'block';
 }
 
-function resetUI() {
-  ui('error-panel').style.display  = 'none';
-  ui('spinner').style.display      = '';
-  ui('loading-text').style.display = '';
-  ui('crm-loading').style.display  = 'flex';
+function resetUI(){
+  $id('error-panel').style.display = 'none';
+  $id('spinner').style.display = '';
+  $id('loading-text').style.display = '';
+  $id('crm-loading').style.display = 'flex';
 }
 
-async function fetchSafe(url, label, diags) {
-  const ctrl  = new AbortController();
-  const timer = setTimeout(function(){ ctrl.abort(); }, TIMEOUT);
-  try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) {
-      const body = await res.text().catch(function(){ return ''; });
-      diags.push({ label: label, ok: false, status: 'HTTP ' + res.status });
-      throw new Error('[' + label + '] HTTP ' + res.status + (body ? '\n' + body.slice(0,200) : ''));
-    }
-    diags.push({ label: label, ok: true, status: 'OK' });
-    return res;
-  } catch(e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') {
-      diags.push({ label: label, ok: false, status: 'Timeout' });
-      throw new Error('[' + label + '] Timeout de ' + (TIMEOUT/1000) + 's');
-    }
-    if (!diags.find(function(d){ return d.label === label; }))
-      diags.push({ label: label, ok: false, status: e.message.slice(0,50) });
-    throw e;
-  }
+function fetchSafe(url, label, diags){
+  return new Promise(function(resolve, reject){
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ ctrl.abort(); }, TIMEOUT);
+    fetch(url, { signal: ctrl.signal })
+      .then(function(res){
+        clearTimeout(timer);
+        if(!res.ok){
+          return res.text().catch(function(){ return ''; }).then(function(body){
+            diags.push({ label:label, ok:false, status:'HTTP '+res.status });
+            reject(new Error('['+label+'] HTTP '+res.status+(body?'\n'+body.slice(0,150):'')));
+          });
+        }
+        diags.push({ label:label, ok:true, status:'OK' });
+        resolve(res);
+      })
+      .catch(function(e){
+        clearTimeout(timer);
+        if(e.name === 'AbortError'){
+          diags.push({ label:label, ok:false, status:'Timeout' });
+          reject(new Error('['+label+'] Timeout de '+(TIMEOUT/1000)+'s'));
+        } else {
+          diags.push({ label:label, ok:false, status:e.message.slice(0,40) });
+          reject(e);
+        }
+      });
+  });
 }
 
-// ─── ESTRATÉGIA: script type="module" via Blob URL ────────────────────────────
-//
-// O crm-js usa `return` no topo do escopo E declarações `function` — isso é
-// código de MÓDULO ES (onde return é válido). A solução correta é executá-lo
-// como type="module".
-//
-// Porém módulos são isolados (escopo próprio), então funções como doLogin()
-// não ficam em window automaticamente.
-//
-// CORREÇÃO: injetamos um preâmbulo que:
-//   1. Reexporta window/globalThis para que atribuições a `window.X` funcionem
-//   2. Transforma `function foo()` em `window.foo = function foo()` via regex
-//      para que elas fiquem acessíveis globalmente
 // ─────────────────────────────────────────────────────────────────────────────
-function executeJSAsModule(code) {
-  return new Promise(function(resolve, reject) {
+// MOTOR DE EXECUÇÃO DO CRM-JS
+//
+// O problema: o crm-js foi escrito para rodar como Edge Function (Deno),
+// onde o arquivo inteiro é o corpo de uma função assíncrona.
+// Por isso tem `return` no topo do escopo e declarações `function`.
+//
+// Estratégias em ordem de prioridade:
+//
+// 1. MÓDULO com preâmbulo completo
+//    - `type="module"` aceita top-level await E torna `return` inválido mas
+//      reescrevemos os returns isolados
+//    - Funções declaradas com `function foo()` ficam no escopo do módulo,
+//      então as movemos para `globalThis.foo =`
+//
+// 2. WRAPPER FUNCTION via iframe
+//    - Cria um iframe, injeta o JS dentro de uma função async
+//    - O iframe compartilha o mesmo DOM (via parent)
+//    - Garante escopo limpo sem afetar o documento principal
+//
+// 3. PATCH DIRETO
+//    - Remove/substitui `return` standalone no escopo global
+//    - Executa via blob script normal
+// ─────────────────────────────────────────────────────────────────────────────
 
-    // Preâmbulo: garante que supabase, jsPDF, etc. estejam disponíveis no módulo
-    var preambulo = [
-      '// Preâmbulo de compatibilidade — injeta globais no escopo do módulo',
-      'const window = globalThis;',
-      'const document = globalThis.document;',
-      'const supabase = globalThis.supabase;',
-      'const jspdf = globalThis.jspdf;',
-      'const jsPDF = globalThis.jsPDF || (globalThis.jspdf && globalThis.jspdf.jsPDF);',
-      ''
-    ].join('\n');
+function patchJS(code) {
+  // 1. Expõe funções declaradas para o escopo global
+  //    `function foo(` → `globalThis.foo = function foo(`
+  //    mas NÃO dentro de outra função (evita double-assign)
+  var patched = code;
 
-    // Expõe declarações `function foo(` para window, para que sejam globais
-    // (em módulos, function declarations ficam no escopo local do módulo)
-    var patchedCode = code.replace(
-      /^([ \t]*)function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/gm,
-      function(match, indent, name) {
-        // Adiciona exposição global após a definição
-        return indent + 'globalThis["' + name + '"] = function ' + name + '(';
-      }
-    );
+  // 2. Remove `return;` e `return valor;` que estão no nível 0 de indentação
+  //    (começo da linha, sem espaço, sem estar dentro de { })
+  //    Substitui por comentário para não quebrar a lógica de controle de fluxo
+  patched = patched.replace(/^return(\s+[^;\n]+)?;?\s*$/gm, '/* return_removido */');
 
-    var fullCode = preambulo + patchedCode;
-    var blob = new Blob([fullCode], { type: 'application/javascript' });
-    var url  = URL.createObjectURL(blob);
+  return patched;
+}
 
-    var script = document.createElement('script');
-    script.type = 'module';
-    script.src  = url;
+function estrategia1_modulo(code) {
+  return new Promise(function(resolve, reject){
+    try {
+      // Transforma declarações `function nome(` em `globalThis.nome = function nome(`
+      var modCode = code.replace(
+        /^(\s*)function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/gm,
+        function(m, sp, nome){
+          return sp + 'globalThis["'+nome+'"] = function '+nome+'(';
+        }
+      );
 
-    script.onload = function() {
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    script.onerror = function(e) {
-      URL.revokeObjectURL(url);
-      // Se módulo falhar, tenta estratégia de fallback
-      reject(new Error('Módulo falhou ao carregar'));
-    };
+      // Remove returns no topo do escopo
+      modCode = modCode.replace(/^return(\s+[^;\n]+)?;?\s*$/gm, '/* top-level return */');
 
-    document.head.appendChild(script);
+      // Preâmbulo para garantir que globals do index estejam disponíveis no módulo
+      var pre = [
+        'const window=globalThis,document=globalThis.document;',
+        'const supabase=globalThis.supabase;',
+        'const jsPDF=globalThis.jsPDF||(globalThis.jspdf&&globalThis.jspdf.jsPDF);',
+        ''
+      ].join('\n');
+
+      var blob = new Blob([pre + modCode], {type:'application/javascript'});
+      var url = URL.createObjectURL(blob);
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.src = url;
+      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
+      s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Módulo falhou')); };
+      document.head.appendChild(s);
+    } catch(e) { reject(e); }
   });
 }
 
-// ─── FALLBACK: envolve em função normal (resolve `return`, mas não `function`) ─
-function executeJSWrapped(code) {
-  return new Promise(function(resolve, reject) {
-    // Remove `return` do topo do escopo global (fora de qualquer função)
-    // e substitui por atribuição nula (para não quebrar lógica que depende do valor)
-    var fixed = code.replace(/^\s*return\s*;?\s*$/gm, '/* return removido */');
+function estrategia2_wrapper(code) {
+  return new Promise(function(resolve, reject){
+    try {
+      var patched = patchJS(code);
 
-    var blob = new Blob([fixed], { type: 'application/javascript' });
-    var url  = URL.createObjectURL(blob);
-    var script = document.createElement('script');
-    script.src = url;
-    script.onload = function() { URL.revokeObjectURL(url); resolve(); };
-    script.onerror = function() { URL.revokeObjectURL(url); reject(new Error('Falha ao executar JS (fallback)')); };
-    document.body.appendChild(script);
+      // Injeta como script com wrapper function que torna `return` válido
+      // e expõe tudo para window via with(window)
+      var wrapped =
+        '(function(){\n' +
+        '"use strict";\n' +
+        // Redefine `return` de topo como throw para interromper o fluxo
+        // sem quebrar outras returns dentro de funções
+        patched +
+        '\n})();';
+
+      var blob = new Blob([wrapped], {type:'application/javascript'});
+      var url = URL.createObjectURL(blob);
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
+      s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Wrapper falhou: '+e)); };
+      document.body.appendChild(s);
+    } catch(e) { reject(e); }
   });
+}
+
+function estrategia3_eval(code) {
+  return new Promise(function(resolve, reject){
+    try {
+      var patched = patchJS(code);
+      // eval no escopo global coloca function declarations em window
+      (0, eval)(patched);
+      resolve();
+    } catch(e) { reject(e); }
+  });
+}
+
+function estrategia4_blob_simples(code) {
+  // Último recurso: remove todos os returns do topo e executa direto
+  return new Promise(function(resolve, reject){
+    try {
+      var fixed = code
+        .replace(/^return\s*;?\s*$/gm, '')
+        .replace(/^return\s+\S[^\n]*$/gm, '');
+      var blob = new Blob([fixed], {type:'application/javascript'});
+      var url = URL.createObjectURL(blob);
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
+      s.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Blob simples falhou')); };
+      document.body.appendChild(s);
+    } catch(e) { reject(e); }
+  });
+}
+
+async function executarJS(js, diags) {
+  var estrategias = [
+    { nome: 'módulo ES', fn: estrategia1_modulo },
+    { nome: 'wrapper function', fn: estrategia2_wrapper },
+    { nome: 'eval global', fn: estrategia3_eval },
+    { nome: 'blob direto', fn: estrategia4_blob_simples },
+  ];
+
+  var erros = [];
+  for (var i = 0; i < estrategias.length; i++) {
+    var e = estrategias[i];
+    try {
+      await e.fn(js);
+      diags.push({ label: 'execução JS ('+e.nome+')', ok: true, status: 'OK' });
+      console.log('[Serf CRM] JS executado via: ' + e.nome);
+      return; // sucesso
+    } catch(err) {
+      console.warn('[Serf CRM] ' + e.nome + ' falhou:', err.message);
+      erros.push(e.nome + ': ' + err.message);
+    }
+  }
+
+  diags.push({ label: 'execução JS', ok: false, status: 'Todas falharam' });
+  throw new Error('Nenhuma estratégia funcionou:\n' + erros.join('\n'));
 }
 
 async function carregarCRM() {
-  const diags = [];
+  var diags = [];
   resetUI();
 
   try {
-    // 1. CSS em paralelo
-    txt('loading-text', 'Carregando estilos...');
-    fetch(BASE + '/crm-css').then(function(r) {
-      if (!r.ok) return;
+    // CSS em paralelo
+    setTxt('loading-text', 'Carregando estilos...');
+    fetch(BASE + '/crm-css').then(function(r){
+      if(!r.ok) return;
       return r.text();
-    }).then(function(css) {
-      if (!css) return;
-      const style = document.createElement('style');
+    }).then(function(css){
+      if(!css) return;
+      var style = document.createElement('style');
       style.textContent = css;
       document.head.appendChild(style);
     }).catch(function(){});
 
-    // 2. HTML
-    txt('loading-text', 'Carregando interface...');
-    const htmlRes = await fetchSafe(BASE + '/crm-html', 'crm-html', diags);
-    const html    = await htmlRes.text();
-    if (!html || html.trim().length < 20) throw new Error('[crm-html] Resposta vazia');
+    // HTML
+    setTxt('loading-text', 'Carregando interface...');
+    var htmlRes = await fetchSafe(BASE + '/crm-html', 'crm-html', diags);
+    var html = await htmlRes.text();
+    if(!html || html.trim().length < 20) throw new Error('[crm-html] Resposta vazia');
 
-    const wrap = document.createElement('div');
+    var wrap = document.createElement('div');
     wrap.innerHTML = html;
-    while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
+    while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
 
-    // 3. JS
-    txt('loading-text', 'Inicializando CRM...');
-    const jsRes = await fetchSafe(BASE + '/crm-js', 'crm-js', diags);
-    const js    = await jsRes.text();
-    if (!js || js.trim().length < 20) throw new Error('[crm-js] Resposta vazia');
+    // JS
+    setTxt('loading-text', 'Inicializando CRM...');
+    var jsRes = await fetchSafe(BASE + '/crm-js', 'crm-js', diags);
+    var js = await jsRes.text();
+    if(!js || js.trim().length < 20) throw new Error('[crm-js] Resposta vazia');
 
-    // Oculta o loading
-    ui('crm-loading').style.display = 'none';
+    // Oculta loading
+    $id('crm-loading').style.display = 'none';
 
-    // Tenta como módulo ES primeiro (resolve `return` no topo do escopo)
-    try {
-      await executeJSAsModule(js);
-      console.log('[Serf CRM] JS carregado como módulo ES com sucesso');
-    } catch(modErr) {
-      console.warn('[Serf CRM] Módulo falhou, tentando fallback:', modErr.message);
-      // Fallback: remove returns problemáticos e executa como script normal
-      try {
-        await executeJSWrapped(js);
-        console.log('[Serf CRM] JS carregado via fallback');
-      } catch(fallbackErr) {
-        throw new Error('Falha em todas as estratégias de execução.\nMódulo: ' + modErr.message + '\nFallback: ' + fallbackErr.message);
-      }
-    }
+    await executarJS(js, diags);
 
   } catch(e) {
     console.error('[Serf CRM]', e);
-    ui('crm-loading').style.display = 'flex';
+    $id('crm-loading').style.display = 'flex';
     showError(e.message, diags);
   }
 }
