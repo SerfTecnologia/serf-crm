@@ -5,11 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Serf Tecnologia CRM</title>
 <link rel="icon" type="image/png" sizes="256x256" href="logo_icon.png">
-
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0C447C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
-
   #crm-loading {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh; flex-direction: column; gap: 16px;
@@ -24,23 +22,22 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   #error-panel {
     display: none; background: rgba(0,0,0,0.35);
     border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-    padding: 24px; max-width: 500px; width: 100%; text-align: left;
+    padding: 24px; max-width: 520px; width: 100%; text-align: left;
   }
   #error-panel h3 { font-size: 15px; margin-bottom: 10px; color: #ffcc00; }
   .error-msg {
-    font-size: 12px; opacity: 0.9; line-height: 1.6; margin-bottom: 14px;
+    font-size: 11px; opacity: 0.9; line-height: 1.6; margin-bottom: 14px;
     background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 6px;
     font-family: monospace; word-break: break-all; white-space: pre-wrap;
-    max-height: 160px; overflow-y: auto;
+    max-height: 180px; overflow-y: auto;
   }
   .diag-list { font-size: 12px; opacity: 0.75; list-style: none; margin-bottom: 14px; }
-  .diag-list li { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: space-between; }
-  .s-ok   { color: #4ade80; font-weight: 600; }
-  .s-fail { color: #f87171; font-weight: 600; }
+  .diag-list li { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: space-between; gap:8px; }
+  .s-ok   { color: #4ade80; font-weight: 600; white-space:nowrap; }
+  .s-fail { color: #f87171; font-weight: 600; white-space:nowrap; }
   .btn-retry {
     background: #fff; color: #0C447C; border: none; border-radius: 8px;
     padding: 10px 24px; font-size: 14px; font-weight: 600;
@@ -63,6 +60,7 @@
   </div>
 </div>
 
+<!-- Dependências globais carregadas de forma síncrona -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -79,12 +77,9 @@ function showError(msg, diags) {
   ui('error-msg').textContent      = msg;
   const list = ui('diag-list');
   list.innerHTML = '';
-  (diags || []).forEach(function(d) {
+  (diags||[]).forEach(function(d) {
     const li = document.createElement('li');
-    li.innerHTML =
-      '<span>' + d.label + '</span>' +
-      '<span class="' + (d.ok ? 's-ok' : 's-fail') + '">' +
-      (d.ok ? '✓ ' : '✗ ') + d.status + '</span>';
+    li.innerHTML = '<span>' + d.label + '</span><span class="' + (d.ok?'s-ok':'s-fail') + '">' + (d.ok?'✓ ':'✗ ') + d.status + '</span>';
     list.appendChild(li);
   });
   ui('error-panel').style.display = 'block';
@@ -99,14 +94,14 @@ function resetUI() {
 
 async function fetchSafe(url, label, diags) {
   const ctrl  = new AbortController();
-  const timer = setTimeout(function() { ctrl.abort(); }, TIMEOUT);
+  const timer = setTimeout(function(){ ctrl.abort(); }, TIMEOUT);
   try {
     const res = await fetch(url, { signal: ctrl.signal });
     clearTimeout(timer);
     if (!res.ok) {
-      const body = await res.text().catch(function() { return ''; });
+      const body = await res.text().catch(function(){ return ''; });
       diags.push({ label: label, ok: false, status: 'HTTP ' + res.status });
-      throw new Error('[' + label + '] HTTP ' + res.status + (body ? '\n' + body.slice(0, 200) : ''));
+      throw new Error('[' + label + '] HTTP ' + res.status + (body ? '\n' + body.slice(0,200) : ''));
     }
     diags.push({ label: label, ok: true, status: 'OK' });
     return res;
@@ -122,38 +117,80 @@ async function fetchSafe(url, label, diags) {
   }
 }
 
-// ─── CORREÇÃO DO "Illegal return statement" ───────────────────────────────────
-// O crm-js tem `return` no escopo global, o que é inválido em modo script.
-// A solução é envolver o código em uma função (usando new Function()),
-// que torna qualquer `return` de nível superior válido.
-// Além disso, usamos uma IIFE async para permitir await no topo do arquivo.
-function executeJS(code) {
+// ─── ESTRATÉGIA: script type="module" via Blob URL ────────────────────────────
+//
+// O crm-js usa `return` no topo do escopo E declarações `function` — isso é
+// código de MÓDULO ES (onde return é válido). A solução correta é executá-lo
+// como type="module".
+//
+// Porém módulos são isolados (escopo próprio), então funções como doLogin()
+// não ficam em window automaticamente.
+//
+// CORREÇÃO: injetamos um preâmbulo que:
+//   1. Reexporta window/globalThis para que atribuições a `window.X` funcionem
+//   2. Transforma `function foo()` em `window.foo = function foo()` via regex
+//      para que elas fiquem acessíveis globalmente
+// ─────────────────────────────────────────────────────────────────────────────
+function executeJSAsModule(code) {
   return new Promise(function(resolve, reject) {
-    try {
-      // Envolve em IIFE async – corrige `return` global e permite `await` livre
-      // new Function cria uma função no escopo global, então declarações
-      // como `function doLogin() {}` ficam acessíveis via window automaticamente
-      // SOMENTE se usarmos eval. Para compatibilidade máxima, usamos ambos:
 
-      // Tentativa 1: new Function com IIFE async
-      try {
-        var AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        var fn = new AsyncFunction(code);
-        fn().then(resolve).catch(reject);
-        return;
-      } catch(e1) {
-        // Se AsyncFunction falhar, tenta eval direto
-        console.warn('[CRM] AsyncFunction falhou, tentando eval:', e1.message);
+    // Preâmbulo: garante que supabase, jsPDF, etc. estejam disponíveis no módulo
+    var preambulo = [
+      '// Preâmbulo de compatibilidade — injeta globais no escopo do módulo',
+      'const window = globalThis;',
+      'const document = globalThis.document;',
+      'const supabase = globalThis.supabase;',
+      'const jspdf = globalThis.jspdf;',
+      'const jsPDF = globalThis.jsPDF || (globalThis.jspdf && globalThis.jspdf.jsPDF);',
+      ''
+    ].join('\n');
+
+    // Expõe declarações `function foo(` para window, para que sejam globais
+    // (em módulos, function declarations ficam no escopo local do módulo)
+    var patchedCode = code.replace(
+      /^([ \t]*)function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/gm,
+      function(match, indent, name) {
+        // Adiciona exposição global após a definição
+        return indent + 'globalThis["' + name + '"] = function ' + name + '(';
       }
+    );
 
-      // Tentativa 2: eval (coloca tudo no escopo global, inclusive as funções)
-      // eslint-disable-next-line no-eval
-      eval(code);
+    var fullCode = preambulo + patchedCode;
+    var blob = new Blob([fullCode], { type: 'application/javascript' });
+    var url  = URL.createObjectURL(blob);
+
+    var script = document.createElement('script');
+    script.type = 'module';
+    script.src  = url;
+
+    script.onload = function() {
+      URL.revokeObjectURL(url);
       resolve();
+    };
+    script.onerror = function(e) {
+      URL.revokeObjectURL(url);
+      // Se módulo falhar, tenta estratégia de fallback
+      reject(new Error('Módulo falhou ao carregar'));
+    };
 
-    } catch(e) {
-      reject(e);
-    }
+    document.head.appendChild(script);
+  });
+}
+
+// ─── FALLBACK: envolve em função normal (resolve `return`, mas não `function`) ─
+function executeJSWrapped(code) {
+  return new Promise(function(resolve, reject) {
+    // Remove `return` do topo do escopo global (fora de qualquer função)
+    // e substitui por atribuição nula (para não quebrar lógica que depende do valor)
+    var fixed = code.replace(/^\s*return\s*;?\s*$/gm, '/* return removido */');
+
+    var blob = new Blob([fixed], { type: 'application/javascript' });
+    var url  = URL.createObjectURL(blob);
+    var script = document.createElement('script');
+    script.src = url;
+    script.onload = function() { URL.revokeObjectURL(url); resolve(); };
+    script.onerror = function() { URL.revokeObjectURL(url); reject(new Error('Falha ao executar JS (fallback)')); };
+    document.body.appendChild(script);
   });
 }
 
@@ -162,27 +199,23 @@ async function carregarCRM() {
   resetUI();
 
   try {
-    // 1. CSS em paralelo (não bloqueia o fluxo principal)
+    // 1. CSS em paralelo
     txt('loading-text', 'Carregando estilos...');
     fetch(BASE + '/crm-css').then(function(r) {
-      if (r.ok) return r.text();
+      if (!r.ok) return;
+      return r.text();
     }).then(function(css) {
       if (!css) return;
       const style = document.createElement('style');
       style.textContent = css;
       document.head.appendChild(style);
-      diags.push({ label: 'crm-css', ok: true, status: 'OK' });
-    }).catch(function() {
-      diags.push({ label: 'crm-css', ok: false, status: 'Falhou (ignorado)' });
-    });
+    }).catch(function(){});
 
     // 2. HTML
     txt('loading-text', 'Carregando interface...');
     const htmlRes = await fetchSafe(BASE + '/crm-html', 'crm-html', diags);
     const html    = await htmlRes.text();
-
-    if (!html || html.trim().length < 20)
-      throw new Error('[crm-html] Resposta vazia');
+    if (!html || html.trim().length < 20) throw new Error('[crm-html] Resposta vazia');
 
     const wrap = document.createElement('div');
     wrap.innerHTML = html;
@@ -192,14 +225,25 @@ async function carregarCRM() {
     txt('loading-text', 'Inicializando CRM...');
     const jsRes = await fetchSafe(BASE + '/crm-js', 'crm-js', diags);
     const js    = await jsRes.text();
+    if (!js || js.trim().length < 20) throw new Error('[crm-js] Resposta vazia');
 
-    if (!js || js.trim().length < 20)
-      throw new Error('[crm-js] Resposta vazia');
-
-    // Oculta o loading antes de executar o JS do CRM
+    // Oculta o loading
     ui('crm-loading').style.display = 'none';
 
-    await executeJS(js);
+    // Tenta como módulo ES primeiro (resolve `return` no topo do escopo)
+    try {
+      await executeJSAsModule(js);
+      console.log('[Serf CRM] JS carregado como módulo ES com sucesso');
+    } catch(modErr) {
+      console.warn('[Serf CRM] Módulo falhou, tentando fallback:', modErr.message);
+      // Fallback: remove returns problemáticos e executa como script normal
+      try {
+        await executeJSWrapped(js);
+        console.log('[Serf CRM] JS carregado via fallback');
+      } catch(fallbackErr) {
+        throw new Error('Falha em todas as estratégias de execução.\nMódulo: ' + modErr.message + '\nFallback: ' + fallbackErr.message);
+      }
+    }
 
   } catch(e) {
     console.error('[Serf CRM]', e);
