@@ -37,12 +37,6 @@
   </div>
 </div>
 
-<!--
-  ORDEM CRÍTICA:
-  1. Supabase SDK  → define window.supabase
-  2. jsPDF         → define window.jspdf / window.jsPDF
-  3. Nosso loader  → busca crm-css, crm-html, crm-js e executa na ordem certa
--->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -98,23 +92,90 @@ function fetchTexto(url, label, diags){
           reject(new Error('['+label+'] Timeout de '+(TIMEOUT/1000)+'s'));
         } else {
           if(!diags.find(function(d){ return d.label===label; }))
-            diags.push({ label:label, ok:false, status:e.message.slice(0,40) });
+            diags.push({ label:label, ok:false, status:e.message.slice(0,50) });
           reject(e);
         }
       });
   });
 }
 
-// Injeta script via Blob e aguarda onload
-function injectScript(code, tipo){
+// ─── PATCH CIRÚRGICO ──────────────────────────────────────────────────────────
+//
+// O crm-js tem o padrão:
+//
+//   function getTeamOnForDate(dateStr) { return "RW"; }   ← fecha na linha 97
+//   const ref  = new Date(...)   ← escopo global, OK
+//   const curr = new Date(...)   ← escopo global, OK
+//   ...
+//   return sameAsRef ? ...;      ← ESTE é o return ilegal (escopo global)
+//   }                            ← chave extra que fecharia uma função inexistente
+//
+// Estratégia: rastreia profundidade de chaves corretamente,
+// tratando funções de uma linha `function f() { ... }` como depth=0 depois.
+// Qualquer `return` com depth=0 é inválido → vira comentário.
+//
+function patchJS(code) {
+  var lines  = code.split('\n');
+  var depth  = 0;
+  var out    = [];
+  var patches = 0;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+
+    // Conta chaves na linha para atualizar profundidade
+    // Usamos um mini-parser simples que ignora chaves em strings e comentários
+    var d = 0;
+    var inStr  = false;
+    var strCh  = '';
+    var inLine = false; // comentário de linha
+
+    for (var c = 0; c < line.length; c++) {
+      var ch = line[c];
+
+      if (inLine) break; // resto da linha é comentário
+
+      if (!inStr) {
+        if (ch === '/' && line[c+1] === '/') { inLine = true; break; }
+        if (ch === '"' || ch === "'" || ch === '`') { inStr = true; strCh = ch; continue; }
+        if (ch === '{') d++;
+        if (ch === '}') d--;
+      } else {
+        if (ch === strCh && line[c-1] !== '\\') inStr = false;
+      }
+    }
+
+    // Verifica se é um return no escopo global (depth atual = 0)
+    if (depth === 0 && /^\s*return\b/.test(line)) {
+      out.push(line.replace(/return/, '/*PATCHED_RETURN*/void'));
+      patches++;
+      console.log('[CRM patch] Linha '+(i+1)+' return→void: '+line.trim().slice(0,60));
+    } else {
+      out.push(line);
+    }
+
+    // Atualiza depth DEPOIS de processar a linha
+    depth += d;
+    if (depth < 0) depth = 0;
+  }
+
+  if (patches > 0) {
+    console.log('[Serf CRM] Patch aplicado: '+patches+' return(s) globais corrigidos');
+  }
+  return out.join('\n');
+}
+
+function injectScript(code){
   return new Promise(function(resolve, reject){
-    var blob   = new Blob([code], {type:'application/javascript'});
-    var url    = URL.createObjectURL(blob);
-    var s      = document.createElement('script');
-    if(tipo) s.type = tipo;
-    s.src = url;
-    s.onload  = function(){ URL.revokeObjectURL(url); resolve(); };
-    s.onerror = function(e){ URL.revokeObjectURL(url); reject(new Error('Erro ao executar script')); };
+    var blob = new Blob([code], {type:'application/javascript'});
+    var url  = URL.createObjectURL(blob);
+    var s    = document.createElement('script');
+    s.src    = url;
+    s.onload = function(){ URL.revokeObjectURL(url); resolve(); };
+    s.onerror = function(e){
+      URL.revokeObjectURL(url);
+      reject(new Error('Erro ao executar crm-js'));
+    };
     document.body.appendChild(s);
   });
 }
@@ -124,8 +185,7 @@ async function carregarCRM(){
   resetUI();
 
   try {
-
-    // ── 1. CSS (paralelo, não bloqueia) ──────────────────────────────────────
+    // 1. CSS (paralelo)
     setTxt('loading-text', 'Carregando estilos...');
     fetch(BASE+'/crm-css')
       .then(function(r){ return r.ok ? r.text() : null; })
@@ -134,10 +194,9 @@ async function carregarCRM(){
         var el = document.createElement('style');
         el.textContent = css;
         document.head.appendChild(el);
-      })
-      .catch(function(){});
+      }).catch(function(){});
 
-    // ── 2. HTML ───────────────────────────────────────────────────────────────
+    // 2. HTML
     setTxt('loading-text', 'Carregando interface...');
     var html = await fetchTexto(BASE+'/crm-html', 'crm-html', diags);
     if(!html || html.trim().length < 20) throw new Error('[crm-html] Resposta vazia');
@@ -146,35 +205,20 @@ async function carregarCRM(){
     wrap.innerHTML = html;
     while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
 
-    // ── 3. JS ─────────────────────────────────────────────────────────────────
-    // O crm-js usa `supabase.createClient(...)` no topo do arquivo.
-    // Para que isso funcione, o SDK do Supabase (já carregado acima como script
-    // síncrono) precisa estar exposto como `supabase` no escopo global.
-    //
-    // window.supabase já é definido pelo SDK como o objeto do módulo inteiro.
-    // O crm-js chama `supabase.createClient(...)` — isso funciona direto.
-    //
-    // Executamos o JS como script normal (não módulo) via Blob URL para que:
-    //   • Declarações `function foo()` fiquem globais (acessíveis como window.foo)
-    //   • `const sb = supabase.createClient(...)` encontre window.supabase
-    //   • `await` dentro de async functions funcione normalmente
-    //
+    // 3. JS — busca, patcha e executa
     setTxt('loading-text', 'Inicializando CRM...');
     var js = await fetchTexto(BASE+'/crm-js', 'crm-js', diags);
     if(!js || js.trim().length < 20) throw new Error('[crm-js] Resposta vazia');
 
-    // Esconde loading antes de executar (o JS vai mostrar a tela de login)
+    var jsPatched = patchJS(js);
+
     $id('crm-loading').style.display = 'none';
+    await injectScript(jsPatched);
 
-    // Executa como script clássico — sem `type="module"` — para manter
-    // declarações de função no escopo global
-    await injectScript(js);
-
-    // Chama init() se existir (o crm-js provavelmente define e chama init())
-    // mas não forçamos: se o JS já chama init() internamente, não chamamos de novo
-    if(typeof init === 'function' && !window.__crmInitCalled){
-      window.__crmInitCalled = true;
-      init();
+    // Chama init() se definida e ainda não chamada pelo próprio JS
+    if(typeof window.init === 'function' && !window.__crmInitDone){
+      window.__crmInitDone = true;
+      window.init();
     }
 
   } catch(e){
