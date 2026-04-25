@@ -5,59 +5,299 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Serf Tecnologia CRM</title>
 <link rel="icon" type="image/png" sizes="256x256" href="logo_icon.png">
-<link rel="stylesheet" href="https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1/crm-css">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0C447C;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  #crm-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    flex-direction: column;
+    gap: 16px;
+    color: #fff;
+    padding: 24px;
+  }
+
+  #crm-loading img {
+    max-width: 180px;
+    opacity: 0.9;
+  }
+
+  .loading-text {
+    opacity: 0.75;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Painel de erro */
+  #error-panel {
+    display: none;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    text-align: left;
+  }
+
+  #error-panel h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #ffcc00;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #error-panel .error-msg {
+    font-size: 13px;
+    opacity: 0.85;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    background: rgba(0,0,0,0.2);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    word-break: break-all;
+  }
+
+  #error-panel .diag-list {
+    font-size: 12px;
+    opacity: 0.7;
+    list-style: none;
+    margin-bottom: 16px;
+  }
+
+  #error-panel .diag-list li {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  #error-panel .diag-list li span.status {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .status-ok   { color: #4ade80; }
+  .status-fail { color: #f87171; }
+  .status-pend { color: #facc15; }
+
+  .btn-retry {
+    background: #fff;
+    color: #0C447C;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+
+  .btn-retry:hover { opacity: 0.85; }
+</style>
 </head>
 <body>
-<div id="crm-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0C447C;color:#fff;font-family:sans-serif;font-size:14px;flex-direction:column;gap:12px">
-  <img src="logo_serf.png" alt="Serf" style="max-width:180px;opacity:.9">
-  <div style="opacity:.7">Carregando CRM...</div>
+
+<div id="crm-loading">
+  <img src="logo_serf.png" alt="Serf Tecnologia" onerror="this.style.display='none'">
+  <div class="spinner" id="spinner"></div>
+  <div class="loading-text" id="loading-text">Conectando ao CRM...</div>
+
+  <div id="error-panel">
+    <h3>⚠️ Erro ao carregar o CRM</h3>
+    <div class="error-msg" id="error-msg">Erro desconhecido</div>
+    <ul class="diag-list" id="diag-list"></ul>
+    <button class="btn-retry" onclick="recarregar()">🔄 Tentar novamente</button>
+  </div>
 </div>
 
-<!-- 1. SDK do Supabase carregado primeiro (SÍNCRONO) -->
+<!-- Supabase SDK (síncrono, necessário antes do JS principal) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- 2. jsPDF para geração de contratos -->
+<!-- jsPDF para geração de contratos -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-(async function() {
-  const BASE = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
-  const loading = document.getElementById('crm-loading');
+// ─── Configuração ────────────────────────────────────────────────────────────
+const BASE    = 'https://kcgdhzlrrflyzluzlskf.supabase.co/functions/v1';
+const TIMEOUT = 20000; // 20 segundos por request
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function setLoadingText(msg) {
+  document.getElementById('loading-text').textContent = msg;
+}
+
+function showError(msg, diags) {
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('loading-text').style.display = 'none';
+  document.getElementById('error-msg').textContent = msg;
+
+  const list = document.getElementById('diag-list');
+  list.innerHTML = '';
+  (diags || []).forEach(function(d) {
+    const li = document.createElement('li');
+    const cls = d.ok === true ? 'status-ok' : d.ok === false ? 'status-fail' : 'status-pend';
+    const icon = d.ok === true ? '✓' : d.ok === false ? '✗' : '–';
+    li.innerHTML = '<span>' + d.label + '</span><span class="status ' + cls + '">' + icon + ' ' + d.status + '</span>';
+    list.appendChild(li);
+  });
+
+  document.getElementById('error-panel').style.display = 'block';
+}
+
+// Fetch com timeout e diagnóstico de erro detalhado
+async function fetchComTimeout(url, label, diags) {
+  const controller = new AbortController();
+  const timer = setTimeout(function() { controller.abort(); }, TIMEOUT);
 
   try {
-    // Carrega HTML body das Edge Functions
-    const htmlRes = await fetch(BASE + '/crm-html');
-    if (!htmlRes.ok) throw new Error('Falha ao carregar interface (' + htmlRes.status + ')');
-    const html = await htmlRes.text();
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'Accept': '*/*' }
+    });
+    clearTimeout(timer);
 
-    // Injeta o HTML no body
-    loading.style.display = 'none';
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    while (container.firstChild) document.body.appendChild(container.firstChild);
+    if (!res.ok) {
+      const body = await res.text().catch(function() { return ''; });
+      diags.push({ label: label, ok: false, status: 'HTTP ' + res.status });
+      throw new Error(label + ' retornou HTTP ' + res.status + (body ? ': ' + body.slice(0, 120) : ''));
+    }
 
-    // Carrega o JS principal como módulo inline para garantir execução após DOM pronto
-    const jsRes = await fetch(BASE + '/crm-js');
-    if (!jsRes.ok) throw new Error('Falha ao carregar JS (' + jsRes.status + ')');
-    const jsText = await jsRes.text();
-
-    // Executa o JS via Blob URL para ter stack traces corretos
-    const blob = new Blob([jsText], {type: 'application/javascript'});
-    const url = URL.createObjectURL(blob);
-    const script = document.createElement('script');
-    script.src = url;
-    script.onload = () => URL.revokeObjectURL(url);
-    script.onerror = (e) => {
-      console.error('Erro ao executar CRM JS:', e);
-      loading.style.display = 'flex';
-      loading.innerHTML = '<div style="color:#fff;text-align:center"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div>Erro ao inicializar o CRM</div><div style="font-size:12px;opacity:.7;margin-top:4px">Verifique o console para detalhes</div></div>';
-    };
-    document.body.appendChild(script);
+    diags.push({ label: label, ok: true, status: 'OK' });
+    return res;
 
   } catch(e) {
-    console.error('Erro ao carregar CRM:', e);
-    loading.innerHTML = '<div style="color:#fff;text-align:center"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div>Erro ao carregar o CRM</div><div style="font-size:12px;opacity:.7;margin-top:4px">' + e.message + '</div></div>';
+    clearTimeout(timer);
+    if (e.name === 'AbortError') {
+      diags.push({ label: label, ok: false, status: 'Timeout (' + (TIMEOUT/1000) + 's)' });
+      throw new Error(label + ': timeout de ' + (TIMEOUT/1000) + 's excedido');
+    }
+    // Re-lança se já adicionamos o diagnóstico
+    if (!diags.find(function(d) { return d.label === label; })) {
+      diags.push({ label: label, ok: false, status: e.message.slice(0, 40) });
+    }
+    throw e;
   }
-})();
+}
+
+// Injetar CSS externo de forma segura
+function injectCSS(url) {
+  return new Promise(function(resolve) {
+    const link = document.createElement('link');
+    link.rel  = 'stylesheet';
+    link.href = url;
+    link.onload  = function() { resolve(true); };
+    link.onerror = function() { resolve(false); }; // CSS falhar não bloqueia
+    document.head.appendChild(link);
+    // fallback: se não disparar onload em 5s, continua
+    setTimeout(function() { resolve(false); }, 5000);
+  });
+}
+
+// Executa JS via Blob URL (stack traces corretos)
+function executeJS(jsText) {
+  return new Promise(function(resolve, reject) {
+    const blob   = new Blob([jsText], { type: 'application/javascript' });
+    const url    = URL.createObjectURL(blob);
+    const script = document.createElement('script');
+    script.src   = url;
+    script.onload = function() {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    script.onerror = function(e) {
+      URL.revokeObjectURL(url);
+      reject(new Error('Erro de sintaxe ou execução no JS do CRM'));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+// ─── Loader principal ─────────────────────────────────────────────────────────
+async function carregarCRM() {
+  const diags = [];
+
+  // Reset UI
+  document.getElementById('error-panel').style.display  = 'none';
+  document.getElementById('spinner').style.display       = '';
+  document.getElementById('loading-text').style.display  = '';
+  document.getElementById('crm-loading').style.display   = 'flex';
+
+  try {
+    // 1. CSS (em paralelo, não bloqueia)
+    setLoadingText('Carregando estilos...');
+    injectCSS(BASE + '/crm-css').then(function(ok) {
+      diags.push({ label: 'crm-css', ok: ok, status: ok ? 'OK' : 'Falhou (continuando)' });
+    });
+
+    // 2. HTML
+    setLoadingText('Carregando interface...');
+    const htmlRes  = await fetchComTimeout(BASE + '/crm-html', 'crm-html', diags);
+    const htmlText = await htmlRes.text();
+
+    if (!htmlText || htmlText.trim().length < 10) {
+      throw new Error('crm-html retornou conteúdo vazio');
+    }
+
+    // Injeta HTML
+    const container = document.createElement('div');
+    container.innerHTML = htmlText;
+    while (container.firstChild) document.body.appendChild(container.firstChild);
+
+    // 3. JS
+    setLoadingText('Inicializando CRM...');
+    const jsRes  = await fetchComTimeout(BASE + '/crm-js', 'crm-js', diags);
+    const jsText = await jsRes.text();
+
+    if (!jsText || jsText.trim().length < 10) {
+      throw new Error('crm-js retornou conteúdo vazio');
+    }
+
+    // Esconde loading ANTES de executar o JS (o JS pode mostrar a UI de login)
+    document.getElementById('crm-loading').style.display = 'none';
+
+    await executeJS(jsText);
+
+  } catch(e) {
+    console.error('[Serf CRM] Erro fatal:', e);
+    document.getElementById('crm-loading').style.display = 'flex';
+    showError(e.message, diags);
+  }
+}
+
+function recarregar() {
+  carregarCRM();
+}
+
+// ─── Inicializa ───────────────────────────────────────────────────────────────
+// Aguarda Supabase SDK e jsPDF carregarem (scripts síncronos acima)
+window.addEventListener('load', function() {
+  carregarCRM();
+});
 </script>
 </body>
 </html>
