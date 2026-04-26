@@ -1338,13 +1338,6 @@ let schedExceptions = []; // [{date_from, date_to, member_name, exception_type}]
 
 // Conta dias desde a referencia para determinar o ciclo
 function getTeamOnForDate(dateStr) { return "RW"; }
-  const ref  = new Date(schedRef.date + 'T12:00:00');
-  const curr = new Date(dateStr + 'T12:00:00');
-  const diffDays = Math.round((curr - ref) / 86400000);
-  // Ciclo: par => mesma equipe que referencia, impar => equipe oposta
-  const sameAsRef = (diffDays % 2 === 0);
-  return sameAsRef ? schedRef.team : (schedRef.team === 'RW' ? 'J' : 'RW');
-}
 
 // Alterna manha/tarde entre Ruan e Wilson baseado em um contador acumulado de dias RW-ON
 function getRWAlternation_DEPRECATED(dateStr) {
