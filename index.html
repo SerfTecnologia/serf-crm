@@ -237,8 +237,37 @@ tr:hover td{background:#FAFAF7}
 .notif-btn{position:relative;cursor:pointer;padding:6px;border-radius:8px;background:#F1EFE8;border:1px solid var(--border);display:flex;align-items:center}
 .notif-count{position:absolute;top:-4px;right:-4px;background:#A32D2D;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;min-width:16px;text-align:center}
 
-/* SCHEDULE TABLE */
-.sched-cell{padding:3px;border:1px solid var(--border);vertical-align:top;min-width:100px}
+/* BLUR/REVEAL metric values */
+.metric-value.blurred{filter:blur(6px);user-select:none;transition:filter .25s}
+.metric-reveal-btn{background:none;border:none;cursor:pointer;font-size:14px;padding:0 0 0 6px;vertical-align:middle;opacity:.6;transition:opacity .15s}
+.metric-reveal-btn:hover{opacity:1}
+/* TICKET DETAIL */
+.ticket-detail-wrap{display:flex;flex-direction:column;gap:14px}
+.ticket-comment{display:flex;gap:10px;align-items:flex-start}
+.ticket-comment-bubble{flex:1;background:#F7F5EE;border-radius:0 10px 10px 10px;padding:10px 12px;border:1px solid var(--border)}
+.ticket-comment-meta{font-size:10px;color:var(--sub);margin-bottom:4px}
+.ticket-comment-text{font-size:13px}
+.ticket-comment-imgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ticket-comment-img{width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer}
+/* TICKET TABS */
+.ticket-kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kanban-col{background:#F7F5EE;border-radius:10px;padding:10px}
+.kanban-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kanban-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;transition:border .15s}
+.kanban-card:hover{border-color:var(--accent)}
+.kanban-card-title{font-size:12px;font-weight:600;margin-bottom:4px}
+.kanban-card-meta{font-size:10px;color:var(--sub)}
+@media(max-width:768px){.ticket-kanban{grid-template-columns:1fr}}
+/* improved mobile */
+@media(max-width:480px){
+  .metrics{grid-template-columns:1fr 1fr!important}
+  .metric-value{font-size:18px}
+  .topbar-title{font-size:14px}
+  .btn{padding:6px 10px;font-size:11px}
+  .modal{padding:16px!important}
+  .card,.section{padding:12px}
+  th,td{padding:5px 6px;font-size:11px}
+}
 .sched-shift{padding:3px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-bottom:2px;cursor:pointer;line-height:1.4;transition:opacity .15s;white-space:nowrap}
 .sched-shift:hover{opacity:.75}
 .sched-manha{background:#BBDEFB;color:#0D47A1}
@@ -386,6 +415,9 @@ tr:hover td{background:#FAFAF7}
   <div class="main">
     <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div class="topbar">
+      <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <div>
         <div class="topbar-title" id="page-title">Dashboard</div>
         <div class="topbar-sub" id="page-sub">Visão geral do sistema</div>
@@ -402,10 +434,22 @@ tr:hover td{background:#FAFAF7}
 <!-- DASHBOARD PAGE -->
 <div id="page-dashboard" class="page active">
   <div class="metrics" id="dash-metrics">
-    <div class="metric"><div class="metric-label">Clientes Ativos</div><div class="metric-value" id="dash-clients">—</div></div>
-    <div class="metric"><div class="metric-label">Chamados Abertos</div><div class="metric-value" id="dash-tickets">—</div></div>
-    <div class="metric"><div class="metric-label">Receita Mensal Est.</div><div class="metric-value" id="dash-revenue">—</div></div>
-    <div class="metric"><div class="metric-label">A Receber</div><div class="metric-value" id="dash-receivable">—</div></div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:center;justify-content:space-between">Clientes Ativos <button class="metric-reveal-btn" onclick="toggleBlur('dash-clients',this)" title="Mostrar/ocultar">👁</button></div>
+      <div class="metric-value blurred" id="dash-clients">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Chamados Abertos</div>
+      <div class="metric-value" id="dash-tickets">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:center;justify-content:space-between">Receita Mensal Est. <button class="metric-reveal-btn" onclick="toggleBlur('dash-revenue',this)" title="Mostrar/ocultar">👁</button></div>
+      <div class="metric-value blurred" id="dash-revenue">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:center;justify-content:space-between">A Receber <button class="metric-reveal-btn" onclick="toggleBlur('dash-receivable',this)" title="Mostrar/ocultar">👁</button></div>
+      <div class="metric-value blurred" id="dash-receivable">—</div>
+    </div>
   </div>
   <div class="grid2">
     <div class="card">
@@ -424,14 +468,19 @@ tr:hover td{background:#FAFAF7}
 
 <!-- CHAMADOS PAGE -->
 <div id="page-chamados" class="page">
-  <div class="section">
-    <div class="card-header">
-      <span class="card-title">Chamados</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <select id="filter-ticket-status" onchange="loadTickets()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
-          <option value="">Todos</option><option value="ABERTO">Abertos</option><option value="EM_ANDAMENTO">Em andamento</option><option value="FECHADO">Fechados</option>
+  <div class="tab-nav" style="margin-bottom:0">
+    <button class="tab-btn active" onclick="loadTickets('',this)">Todos</button>
+    <button class="tab-btn" onclick="loadTickets('ABERTO',this)"> Abertos</button>
+    <button class="tab-btn" onclick="loadTickets('EM_ANDAMENTO',this)"> Em Andamento</button>
+    <button class="tab-btn" onclick="loadTickets('__meus__',this)"> Atribuídos a mim</button>
+  </div>
+  <div class="section" style="border-top-left-radius:0;border-top-right-radius:0;border-top:none">
+    <div class="card-header" style="margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="filter-ticket-priority" onchange="loadTickets(_ticketStatusFilter)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
+          <option value="">Todas prioridades</option><option value="ALTA">Alta</option><option value="MEDIA">Média</option><option value="BAIXA">Baixa</option>
         </select>
-        <input type="text" id="search-tickets" placeholder="Buscar..." oninput="filterTickets()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;width:160px">
+        <input type="text" id="search-tickets" placeholder="Buscar chamado..." oninput="filterTickets()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;min-width:160px;flex:1">
       </div>
     </div>
     <div class="table-wrap"><table>
@@ -826,6 +875,56 @@ tr:hover td{background:#FAFAF7}
     <div class="form-group"><label>Nova senha</label><input type="password" id="new-password" placeholder="Mín. 8 caracteres"></div>
     <div class="form-group"><label>Confirmar senha</label><input type="password" id="confirm-password"></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-change-pwd')">Cancelar</button><button class="btn btn-primary" onclick="changePassword()">Alterar</button></div>
+  </div>
+</div>
+
+<!-- TICKET DETAIL MODAL -->
+<div class="modal-overlay" id="modal-ticket-detail">
+  <div class="modal modal-xl" style="max-width:860px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="td-title-display">Chamado</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px" id="td-meta-display"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="td-status-quick" onchange="quickUpdateTicketStatus()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:600">
+          <option value="ABERTO">Aberto</option>
+          <option value="EM_ANDAMENTO">Em Andamento</option>
+          <option value="FECHADO">Fechado</option>
+        </select>
+        <button class="modal-close" onclick="closeModal('modal-ticket-detail')">×</button>
+      </div>
+    </div>
+
+    <!-- Info row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;background:#F7F5EE;border-radius:8px;padding:12px">
+      <div><div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase">Cliente</div><div style="font-size:13px;font-weight:600" id="td-client-display">—</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase">Responsável</div><div style="font-size:13px" id="td-assigned-display">—</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase">Prioridade / Tipo</div><div id="td-badges-display"></div></div>
+    </div>
+    <div id="td-description-display" style="font-size:13px;color:var(--sub);margin-bottom:14px;padding:10px;background:#FAFAF7;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap"></div>
+
+    <!-- Comments -->
+    <div style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Atualizações / Comentários</div>
+    <div id="td-comments-list" style="max-height:280px;overflow-y:auto;margin-bottom:12px"></div>
+
+    <!-- New comment form -->
+    <div style="background:#F7F5EE;border-radius:8px;padding:12px;border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px;text-transform:uppercase">Adicionar comentário</div>
+      <textarea id="td-new-comment" rows="3" placeholder="Descreva a atualização, diagnóstico, ação realizada..." style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none;resize:vertical;font-family:inherit;margin-bottom:8px"></textarea>
+      <!-- Image upload -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;display:block;margin-bottom:4px">Prints / Fotos (opcional)</label>
+        <input type="file" id="td-img-input" multiple accept="image/*" style="display:none" onchange="handleTicketCommentImages(this)">
+        <button class="btn btn-sm" onclick="document.getElementById('td-img-input').click()">📎 Adicionar imagens</button>
+        <div id="td-img-previews" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="withSave(this,()=>saveTicketComment())">Salvar comentário</button>
+        <button class="btn btn-sm btn-primary" onclick="openTicketEditFromDetail()">Editar chamado</button>
+      </div>
+    </div>
+    <input type="hidden" id="td-ticket-id">
   </div>
 </div>
 
@@ -1371,7 +1470,38 @@ async function loadAllUsers(){const{data}=await sb.from('user_profiles').select(
 async function loadAllPlans(){const{data}=await sb.from('plans').select('*').order('monthly_price');allPlans=data||[];}
 async function loadAllServices(){const{data}=await sb.from('services').select('*').eq('active',true).order('name');allServices=data||[];}
 async function loadDashboard(){const[{data:cl},{data:ti},{data:bi}]=await Promise.all([sb.from('clients').select('*,plans(monthly_price)'),sb.from('tickets').select('*').neq('status','FECHADO'),sb.from('billings').select('*').eq('status','PENDENTE')]);document.getElementById('dash-clients').textContent=(cl||[]).filter(c=>c.status==='ATIVO').length;document.getElementById('dash-tickets').textContent=(ti||[]).length;document.getElementById('dash-revenue').textContent=fmtMoney((cl||[]).reduce((s,c)=>s+Number(c.plans?.monthly_price||0),0));document.getElementById('dash-receivable').textContent=fmtMoney((bi||[]).reduce((s,b)=>s+Number(b.monthly_fee||0)+Number(b.extra_fee||0)+Number(b.one_time_fee||0),0));document.getElementById('badge-chamados').textContent=(ti||[]).length;document.getElementById('dash-open-tickets').innerHTML=!(ti||[]).length?'<div class="empty"><div class="empty-text">Nenhum chamado aberto!</div></div>':(ti||[]).slice(0,6).map(t=>`<div style="padding:8px;border-bottom:1px solid #F1EFE8;font-size:12px"><strong>${t.title}</strong><br>${badgeStatus(t.priority)} ${badgeStatus(t.status)}</div>`).join('');document.getElementById('dash-recent-clients').innerHTML=(cl||[]).slice(0,5).map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px;border-bottom:1px solid #F1EFE8"><div class="avatar">${fmtInitials(c.razao_social)}</div><div style="flex:1;font-size:12px;font-weight:500">${c.razao_social}</div>${badgeStatus(c.status)}</div>`).join('');}
-async function loadTickets(){const status=document.getElementById('filter-ticket-status')?.value;let q=sb.from('tickets').select('*,clients(razao_social),user_profiles(name)').order('opened_at',{ascending:false});if(status)q=q.eq('status',status);const{data}=await q.limit(200);const tb=document.getElementById('tickets-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-text">Nenhum chamado</div></div></td></tr>';return;}tb.innerHTML=data.map((t,i)=>`<tr><td style="font-size:11px;color:var(--sub)">#${i+1}</td><td>${t.clients?.razao_social||'--'}</td><td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td><td>${badgeStatus(t.type)}</td><td>${badgeStatus(t.priority)}</td><td style="font-size:12px">${t.user_profiles?.name||'--'}</td><td>${badgeStatus(t.status)}</td><td style="font-size:11px;color:var(--sub)">${fmtDate(t.opened_at)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openTicketEdit(${JSON.stringify(t)})'>Editar</button>${t.status!=='FECHADO'?`<button class="btn btn-sm" onclick="withSave(this,()=>closeTicket('${t.id}'))">Fechar</button>`:''}<button class="btn btn-sm btn-danger" onclick="deleteTicket('${t.id}')">X</button></div></td></tr>`).join('');}
+let _ticketStatusFilter='';
+async function loadTickets(statusMode='',tabBtn=null){
+  _ticketStatusFilter=statusMode;
+  if(tabBtn){document.querySelectorAll('#page-chamados .tab-btn').forEach(b=>b.classList.remove('active'));tabBtn.classList.add('active');}
+  const priority=document.getElementById('filter-ticket-priority')?.value||'';
+  let q=sb.from('tickets').select('*,clients(razao_social),user_profiles(name)').order('opened_at',{ascending:false});
+  if(statusMode==='__meus__'){if(currentUserProfile?.id)q=q.eq('assigned_to',currentUserProfile.id);}
+  else if(statusMode)q=q.eq('status',statusMode);
+  if(priority)q=q.eq('priority',priority);
+  const{data}=await q.limit(200);
+  const tb=document.getElementById('tickets-table-body');
+  if(!data?.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nenhum chamado encontrado</div></div></td></tr>';return;}
+  tb.innerHTML=data.map((t,i)=>`<tr style="cursor:pointer" onclick="openTicketDetail('${t.id}')">
+    <td style="font-size:11px;color:var(--sub)">#${i+1}</td>
+    <td>${t.clients?.razao_social||'--'}</td>
+    <td style="font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td>
+    <td>${badgeStatus(t.type)}</td>
+    <td>${badgeStatus(t.priority)}</td>
+    <td style="font-size:12px">${t.user_profiles?.name||'--'}</td>
+    <td>${badgeStatus(t.status)}</td>
+    <td style="font-size:11px;color:var(--sub)">${fmtDate(t.opened_at)}</td>
+    <td onclick="event.stopPropagation()"><div style="display:flex;gap:3px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-primary" onclick="openTicketDetail('${t.id}')">Ver</button>
+      <button class="btn btn-sm" onclick='openTicketEdit(${JSON.stringify(t).replace(/'/g,"&#39;")})'>Editar</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteTicket('${t.id}')">X</button>
+    </div></td>
+  </tr>`).join('');
+  // update badge
+  const abertos=(data||[]).filter(t=>t.status==='ABERTO').length;
+  const badge=document.getElementById('badge-chamados');
+  if(badge){badge.textContent=abertos;badge.style.display=abertos?'inline':'none';}
+}
 function filterTickets(){const q=document.getElementById('search-tickets')?.value.toLowerCase()||'';document.querySelectorAll('#tickets-table-body tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});}
 function openTicketModal(){populateClientSelect('t-client','',true);populateUserSelect('t-assigned');['t-id','t-title','t-description','t-outro-name','t-outro-phone','t-outro-doc'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('t-type').value='REMOTO';document.getElementById('t-priority').value='MEDIA';document.getElementById('t-status').value='ABERTO';document.getElementById('ticket-modal-title').textContent='Novo Chamado';document.getElementById('ticket-os-option').style.display='none';const outro=document.getElementById('t-client-outro');if(outro)outro.style.display='none';openModal('modal-ticket');}
 function openTicketEdit(t){populateClientSelect('t-client',t.client_id,false);populateUserSelect('t-assigned',t.assigned_to);document.getElementById('t-id').value=t.id;document.getElementById('t-title').value=t.title;document.getElementById('t-description').value=t.description||'';document.getElementById('t-type').value=t.type;document.getElementById('t-priority').value=t.priority;document.getElementById('t-status').value=t.status;document.getElementById('ticket-modal-title').textContent='Editar Chamado';document.getElementById('ticket-os-option').style.display=t.type==='PRESENCIAL'?'block':'none';const outro=document.getElementById('t-client-outro');if(outro)outro.style.display='none';openModal('modal-ticket');}
@@ -1391,6 +1521,132 @@ async function saveTicket(){const id=document.getElementById('t-id').value;let c
   const p={client_id:clientId,title:document.getElementById('t-title').value,description:document.getElementById('t-description').value,type:document.getElementById('t-type').value,priority:document.getElementById('t-priority').value,status:document.getElementById('t-status').value,assigned_to:document.getElementById('t-assigned').value||null};if(!p.client_id||!p.title)return toast('Preencha cliente e titulo','error');let err;if(id){({error:err}=await sb.from('tickets').update(p).eq('id',id));}else{({error:err}=await sb.from('tickets').insert({...p,opened_at:new Date().toISOString()}));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-ticket');toast(id?'Atualizado!':'Aberto!','success');if(!id&&p.type==='PRESENCIAL')setTimeout(()=>{if(confirm('Criar OS para chamado presencial?'))openWOModal(null,p.client_id);},400);}
 async function closeTicket(id){await sb.from('tickets').update({status:'FECHADO',closed_at:new Date().toISOString()}).eq('id',id);toast('Fechado!','success');}
 async function deleteTicket(id){if(!confirm('Excluir chamado permanentemente?'))return;await sb.from('tickets').delete().eq('id',id);toast('Excluido!','success');}
+
+// ── TICKET DETAIL (comments, prints, quick status)
+let _tdTicket=null;
+let _tdCommentImages=[];
+
+async function openTicketDetail(id){
+  const{data:t,error}=await sb.from('tickets').select('*,clients(razao_social),user_profiles(name)').eq('id',id).single();
+  if(error||!t)return toast('Erro ao carregar chamado','error');
+  _tdTicket=t;
+  _tdCommentImages=[];
+  document.getElementById('td-ticket-id').value=t.id;
+  document.getElementById('td-title-display').textContent=t.title;
+  document.getElementById('td-meta-display').textContent=`Aberto em ${fmtDate(t.opened_at)}${t.closed_at?' · Fechado em '+fmtDate(t.closed_at):''}`;
+  document.getElementById('td-client-display').textContent=t.clients?.razao_social||'--';
+  document.getElementById('td-assigned-display').textContent=t.user_profiles?.name||'Não atribuído';
+  document.getElementById('td-badges-display').innerHTML=badgeStatus(t.priority)+' '+badgeStatus(t.type);
+  document.getElementById('td-description-display').textContent=t.description||'(sem descrição)';
+  document.getElementById('td-status-quick').value=t.status;
+  document.getElementById('td-new-comment').value='';
+  document.getElementById('td-img-previews').innerHTML='';
+  document.getElementById('td-img-input').value='';
+  await loadTicketComments(id);
+  openModal('modal-ticket-detail');
+}
+
+async function loadTicketComments(ticketId){
+  const{data,error}=await sb.from('ticket_comments').select('*').eq('ticket_id',ticketId).order('created_at',{ascending:true});
+  const el=document.getElementById('td-comments-list');
+  if(error){el.innerHTML='<div class="alert alert-danger">Erro ao carregar comentários</div>';return;}
+  if(!data?.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--sub);font-size:13px">Nenhum comentário ainda. Adicione a primeira atualização!</div>';return;}
+  el.innerHTML=data.map(c=>{
+    const imgs=c.image_urls||[];
+    return`<div class="ticket-comment" style="margin-bottom:10px">
+      <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${fmtInitials(c.user_name||'?')}</div>
+      <div class="ticket-comment-bubble">
+        <div class="ticket-comment-meta"><strong>${c.user_name||'Sistema'}</strong> · ${fmtDatetime(c.created_at)}</div>
+        <div class="ticket-comment-text">${(c.body||'').replace(/\n/g,'<br>')}</div>
+        ${imgs.length?`<div class="ticket-comment-imgs">${imgs.map(u=>`<img src="${u}" class="ticket-comment-img" onclick="window.open('${u}','_blank')" title="Ver imagem completa">`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function handleTicketCommentImages(inp){
+  const files=Array.from(inp.files);
+  const pv=document.getElementById('td-img-previews');
+  files.forEach(f=>{
+    if(f.size>8*1024*1024)return toast('Imagem muito grande (max 8MB)','error');
+    const r=new FileReader();
+    r.onload=ev=>{
+      const dataUrl=ev.target.result;
+      _tdCommentImages.push({dataUrl,file:f,name:f.name});
+      const d=document.createElement('div');
+      d.className='img-preview';
+      d.innerHTML=`<img src="${dataUrl}"><button class="img-preview-remove" onclick="removeCommentImg(${_tdCommentImages.length-1},this)">×</button>`;
+      pv.appendChild(d);
+    };
+    r.readAsDataURL(f);
+  });
+}
+function removeCommentImg(idx,btn){_tdCommentImages[idx]=null;btn.closest('.img-preview').remove();}
+
+async function saveTicketComment(){
+  const ticketId=document.getElementById('td-ticket-id').value;
+  const body=document.getElementById('td-new-comment').value.trim();
+  if(!body&&_tdCommentImages.filter(Boolean).length===0)return toast('Escreva um comentário ou adicione uma imagem','error');
+
+  // Upload images to Supabase Storage
+  const uploadedUrls=[];
+  for(const img of _tdCommentImages.filter(Boolean)){
+    try{
+      const ext=img.name.split('.').pop()||'jpg';
+      const path=`ticket-${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      // Convert dataUrl to blob
+      const res=await fetch(img.dataUrl);
+      const blob=await res.blob();
+      const{data:up,error:upErr}=await sb.storage.from('ticket-images').upload(path,blob,{contentType:img.file.type,upsert:false});
+      if(upErr)throw upErr;
+      const{data:{publicUrl}}=sb.storage.from('ticket-images').getPublicUrl(path);
+      uploadedUrls.push(publicUrl);
+    }catch(e){
+      // Fallback: store as base64 in DB (for small images)
+      uploadedUrls.push(img.dataUrl);
+    }
+  }
+
+  const{error}=await sb.from('ticket_comments').insert({
+    ticket_id:ticketId,
+    user_id:currentUserProfile?.id,
+    user_name:currentUserProfile?.name||'Usuário',
+    body:body||'(imagem)',
+    image_urls:uploadedUrls
+  });
+  if(error)return toast('Erro ao salvar: '+error.message,'error');
+  toast('Comentário salvo!','success');
+  document.getElementById('td-new-comment').value='';
+  document.getElementById('td-img-previews').innerHTML='';
+  document.getElementById('td-img-input').value='';
+  _tdCommentImages=[];
+  await loadTicketComments(ticketId);
+}
+
+async function quickUpdateTicketStatus(){
+  const id=document.getElementById('td-ticket-id').value;
+  const status=document.getElementById('td-status-quick').value;
+  const upd={status};
+  if(status==='FECHADO')upd.closed_at=new Date().toISOString();
+  const{error}=await sb.from('tickets').update(upd).eq('id',id);
+  if(error)return toast('Erro: '+error.message,'error');
+  toast('Status atualizado!','success');
+  // Add automatic comment
+  await sb.from('ticket_comments').insert({ticket_id:id,user_id:currentUserProfile?.id,user_name:currentUserProfile?.name||'Sistema',body:`Status alterado para: ${status}`,image_urls:[]});
+  await loadTicketComments(id);
+}
+
+function openTicketEditFromDetail(){
+  if(!_tdTicket)return;
+  closeModal('modal-ticket-detail');
+  setTimeout(()=>openTicketEdit(_tdTicket),200);
+}
+
+function fmtDatetime(d){if(!d)return'--';try{return new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return d;}}
+
+// blur toggle for dashboard
+function toggleBlur(id,btn){const el=document.getElementById(id);if(!el)return;el.classList.toggle('blurred');btn.title=el.classList.contains('blurred')?'Mostrar':'Ocultar';}
 function createOSFromTicket(){const c=document.getElementById('t-client').value;closeModal('modal-ticket');openWOModal(null,c);}
 async function loadAgendaTypes(){const{data}=await sb.from('agenda_types').select('*').eq('active',true).order('name');allAgendaTypes=data||[];}
 async function loadAgendaEvents(){const y=agendaCurrentDate.getFullYear(),m=agendaCurrentDate.getMonth();const{data}=await sb.from('agenda').select('*,user_profiles(name),clients(razao_social),agenda_types(name,color,icon)').gte('start_datetime',new Date(y,m,1).toISOString()).lte('start_datetime',new Date(y,m+1,0,23,59,59).toISOString()).order('start_datetime');agendaEvents=data||[];renderAgendaCalendar();checkAgendaNotifications();}
@@ -1417,9 +1673,13 @@ function addWOService(){addWOServiceRow('',null,1,0,'un');}
 function addWOServiceRow(name,serviceId,qty,price,unit){const c=document.getElementById('wo-services-list'),d=document.createElement('div');d.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap';d.innerHTML=`<select class="wo-svc-sel" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="updWOSvc(this)"><option value="">Selecione...</option>${allServices.map(s=>`<option value="${s.id}" data-price="${s.unit_price}" data-unit="${s.unit_label||'un'}"${s.id===serviceId?' selected':''}>${s.name}</option>`).join('')}</select><input type="number" class="wo-svc-qty service-qty-input" value="${qty||1}" min="0.1" step="0.1" onchange="calcWOTotal()"><span class="wo-svc-unit" style="font-size:11px;color:var(--sub)">${unit||'un'}</span><span class="wo-svc-sub" style="font-size:11px;font-weight:600;color:var(--accent);min-width:55px">${fmtMoney((price||0)*(qty||1))}</span><button class="btn btn-sm btn-danger" onclick="this.closest('div').remove();calcWOTotal()">X</button>`;c.appendChild(d);calcWOTotal();}
 function updWOSvc(sel){const o=sel.selectedOptions[0];if(!o?.value)return;sel.closest('div').querySelector('.wo-svc-unit').textContent=o.dataset.unit||'un';calcWOTotal();}
 function calcWOTotal(){let t=0;document.querySelectorAll('#wo-services-list .wo-svc-sel').forEach(s=>{const o=s.selectedOptions[0];if(!o?.value)return;const p=parseFloat(o.dataset.price||0),q=parseFloat(s.closest('div')?.querySelector('.wo-svc-qty')?.value||1),sub=p*q;t+=sub;const el=s.closest('div')?.querySelector('.wo-svc-sub');if(el)el.textContent=fmtMoney(sub);});document.getElementById('wo-total').textContent=fmtMoney(t);}
-async function saveWorkOrder(){const id=document.getElementById('wo-id').value;const p={client_id:document.getElementById('wo-client').value,title:document.getElementById('wo-title').value,description:document.getElementById('wo-description').value,tech_notes:document.getElementById('wo-tech-notes').value,os_type:document.getElementById('wo-type').value,status:document.getElementById('wo-status').value,assigned_to:document.getElementById('wo-assigned').value||null,scheduled_at:document.getElementById('wo-scheduled').value||null};if(!p.client_id||!p.title)return toast('Preencha cliente e titulo','error');let err,woId=id;if(id){({error:err}=await sb.from('work_orders').update(p).eq('id',id));}else{const res=await sb.from('work_orders').insert(p).select().single();err=res.error;woId=res.data?.id;}if(err)return toast('Erro: '+err.message,'error');const rows=[];if(woId){await sb.from('work_order_services').delete().eq('work_order_id',woId);document.querySelectorAll('#wo-services-list .wo-svc-sel').forEach(s=>{const o=s.selectedOptions[0];if(!o?.value)return;const q=parseFloat(s.closest('div')?.querySelector('.wo-svc-qty')?.value||1),pr=parseFloat(o.dataset.price||0);rows.push({work_order_id:woId,service_id:o.value,quantity:q,unit_price:pr,subtotal:q*pr});});if(rows.length)await sb.from('work_order_services').insert(rows);}if(!id&&p.scheduled_at&&p.assigned_to){const at=allAgendaTypes.find(t=>t.name.toLowerCase().includes('visita'))||allAgendaTypes[0];if(at)await sb.from('agenda').insert({title:'OS: '+p.title,start_datetime:p.scheduled_at,assigned_to:p.assigned_to,client_id:p.client_id,agenda_type:at.name,color:at.color,created_by:currentUserProfile?.id,viewed_by:[]});checkAgendaNotifications();}
-  // Auto-billing integration: if new OS with services, create pending_approval billing
-  if(!id&&rows.length){const svcData=rows.map(r=>({service_id:r.service_id,price:r.unit_price,qty:r.quantity}));await autoCreateBillingFromWO({id:woId,client_id:p.client_id,title:p.title,services:svcData});}
+async function saveWorkOrder(){const id=document.getElementById('wo-id').value;const p={client_id:document.getElementById('wo-client').value,title:document.getElementById('wo-title').value,description:document.getElementById('wo-description').value,tech_notes:document.getElementById('wo-tech-notes').value,os_type:document.getElementById('wo-type').value,status:document.getElementById('wo-status').value,assigned_to:document.getElementById('wo-assigned').value||null,scheduled_at:document.getElementById('wo-scheduled').value||null};if(!p.client_id||!p.title)return toast('Preencha cliente e titulo','error');let err,woId=id;if(id){({error:err}=await sb.from('work_orders').update(p).eq('id',id));}else{const res=await sb.from('work_orders').insert(p).select().single();err=res.error;woId=res.data?.id;}if(err)return toast('Erro: '+err.message,'error');
+  // Collect services from the UI
+  const rows=[];
+  if(woId){await sb.from('work_order_services').delete().eq('work_order_id',woId);document.querySelectorAll('#wo-services-list .wo-svc-sel').forEach(s=>{const o=s.selectedOptions[0];if(!o?.value)return;const q=parseFloat(s.closest('div')?.querySelector('.wo-svc-qty')?.value||1),pr=parseFloat(o.dataset.price||0);rows.push({work_order_id:woId,service_id:o.value,quantity:q,unit_price:pr,subtotal:q*pr});});if(rows.length)await sb.from('work_order_services').insert(rows);}
+  if(!id&&p.scheduled_at&&p.assigned_to){const at=allAgendaTypes.find(t=>t.name.toLowerCase().includes('visita'))||allAgendaTypes[0];if(at)await sb.from('agenda').insert({title:'OS: '+p.title,start_datetime:p.scheduled_at,assigned_to:p.assigned_to,client_id:p.client_id,agenda_type:at.name,color:at.color,created_by:currentUserProfile?.id,viewed_by:[]});checkAgendaNotifications();}
+  // Auto-billing: only for new OS with services that have value
+  if(!id&&rows.length){const total=rows.reduce((s,r)=>s+(Number(r.unit_price||0)*Number(r.quantity||1)),0);if(total>0){const refMonth=new Date().toISOString().slice(0,7)+'-01';const{error:berr}=await sb.from('billings').insert({client_id:p.client_id,monthly_fee:0,extra_fee:0,one_time_fee:total,due_date:new Date(Date.now()+10*86400000).toISOString().split('T')[0],status:'PENDENTE_APROVACAO',reference_month:refMonth,description:'OS: '+p.title,origin:'AUTO',source_wo_id:woId});if(!berr)toast('Cobrança de R$'+total.toFixed(2)+' gerada automaticamente — aguarda aprovação no Financeiro.','success');else console.warn('Auto-billing err:',berr.message);}}
   closeModal('modal-workorder');toast(id?'OS atualizada!':'OS criada!','success');}
 async function concludeWO(id){await sb.from('work_orders').update({status:'CONCLUIDA',concluded_at:new Date().toISOString()}).eq('id',id);toast('Concluida!','success');}
 async function deleteWO(id){if(!confirm('Excluir OS?'))return;await sb.from('work_orders').delete().eq('id',id);toast('Excluido!','success');}
@@ -1804,28 +2064,6 @@ async function approveBilling(id){if(!confirm('Aceitar esta cobrança?'))return;
 async function rejectBilling(id){if(!confirm('Rejeitar esta cobrança? Ela ficará como inativa.'))return;const{error}=await sb.from('billings').update({status:'INATIVO'}).eq('id',id);if(error)return toast('Erro: '+error.message,'error');toast('Cobrança rejeitada (inativa).','success');}
 async function reactivateBilling(id){if(!confirm('Reativar esta cobrança?'))return;await sb.from('billings').update({status:'PENDENTE_APROVACAO'}).eq('id',id);toast('Cobrança reativada!','success');}
 
-// ── AUTO BILLING INTEGRATION: triggered when a WO/OS with value is saved
-async function autoCreateBillingFromWO(wo){
-  if(!wo||!wo.client_id)return;
-  const svcs=wo.services||[];
-  const total=svcs.reduce((s,sv)=>s+(Number(sv.price||0)*Number(sv.qty||1)),0);
-  if(!total||total<=0)return; // no value, skip
-  const refMonth=new Date().toISOString().slice(0,7)+'-01';
-  const desc=(wo.title?wo.title+' — ':'')+'OS automática';
-  const{error}=await sb.from('billings').insert({
-    client_id:wo.client_id,
-    monthly_fee:0,
-    extra_fee:0,
-    one_time_fee:total,
-    due_date:new Date(new Date().setDate(new Date().getDate()+10)).toISOString().split('T')[0],
-    status:'PENDENTE_APROVACAO',
-    reference_month:refMonth,
-    description:desc,
-    origin:'AUTO',
-    source_wo_id:wo.id
-  });
-  if(!error)toast('Cobrança gerada automaticamente — aguardando aprovação no Financeiro.','success');
-}
 function openBillingModal(){populateClientSelect('b-client');document.getElementById('b-id').value='';['b-monthly','b-extra','b-onetime'].forEach(f=>document.getElementById(f).value='0');document.getElementById('b-due').value='';document.getElementById('b-status').value='PENDENTE';document.getElementById('b-ref').value=new Date().toISOString().slice(0,7);document.getElementById('b-desc').value='';openModal('modal-billing');}
 function openBillingEdit(b){populateClientSelect('b-client',b.client_id);document.getElementById('b-id').value=b.id;document.getElementById('b-monthly').value=b.monthly_fee||0;document.getElementById('b-extra').value=b.extra_fee||0;document.getElementById('b-onetime').value=b.one_time_fee||0;document.getElementById('b-due').value=b.due_date?.split('T')[0]||'';document.getElementById('b-status').value=b.status;document.getElementById('b-ref').value=b.reference_month?.slice(0,7)||'';document.getElementById('b-desc').value=b.description||'';openModal('modal-billing');}
 async function saveBilling(){const id=document.getElementById('b-id').value;const p={client_id:document.getElementById('b-client').value,monthly_fee:parseFloat(document.getElementById('b-monthly').value)||0,extra_fee:parseFloat(document.getElementById('b-extra').value)||0,one_time_fee:parseFloat(document.getElementById('b-onetime').value)||0,due_date:document.getElementById('b-due').value,status:document.getElementById('b-status').value,reference_month:document.getElementById('b-ref').value+'-01',description:document.getElementById('b-desc').value};if(!p.client_id)return toast('Selecione o cliente','error');let err;if(id){({error:err}=await sb.from('billings').update(p).eq('id',id));}else{({error:err}=await sb.from('billings').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-billing');toast('Lancamento salvo!','success');}
@@ -1853,21 +2091,29 @@ async function generateNfsePreview(){const ci=document.getElementById('nfse-clie
 function copyNfseEmail(){const t=document.getElementById('nfse-email-text')?.value;if(!t)return toast('Gere a previa primeiro','error');navigator.clipboard.writeText(t).then(()=>toast('Email copiado!','success')).catch(()=>toast('Erro ao copiar','error'));}
 async function saveNfseRecord(statusNfse){
   if(!_nfseCurrentData)return toast('Gere a prévia antes de salvar','error');
-  const{client_id,reference_month,value,extraTotal,totalValue,due}=_nfseCurrentData;
-  // Check if there's already a billing record for this client/month, update it; else create new
-  const{data:existing}=await sb.from('billings').select('id').eq('client_id',client_id).eq('reference_month',reference_month).limit(1);
-  const nfseData={nfse_status:statusNfse,nfse_issued_at:statusNfse==='EMITIDA'?new Date().toISOString():null};
+  const{client_id,reference_month,value,extraTotal,due}=_nfseCurrentData;
+  const nfsePayload={
+    nfse_status:statusNfse,
+    nfse_issued_at:statusNfse==='EMITIDA'?new Date().toISOString():null
+  };
+  // Try to find existing billing for this client+month
+  let existingId=null;
+  try{
+    const{data:ex}=await sb.from('billings').select('id').eq('client_id',client_id).eq('reference_month',reference_month).limit(1);
+    if(ex&&ex.length>0)existingId=ex[0].id;
+  }catch(e){console.warn('lookup err',e);}
+
   let err;
-  if(existing?.length){
-    ({error:err}=await sb.from('billings').update({...nfseData,monthly_fee:value,one_time_fee:extraTotal,due_date:due||null}).eq('id',existing[0].id));
+  if(existingId){
+    ({error:err}=await sb.from('billings').update({...nfsePayload,monthly_fee:value,one_time_fee:extraTotal||0,due_date:due||null}).eq('id',existingId));
   }else{
-    ({error:err}=await sb.from('billings').insert({client_id,reference_month,monthly_fee:value,extra_fee:0,one_time_fee:extraTotal,due_date:due||null,status:statusNfse==='EMITIDA'?'PENDENTE':'PENDENTE',origin:'NFSE',...nfseData}));
+    ({error:err}=await sb.from('billings').insert({client_id,reference_month,monthly_fee:value,extra_fee:0,one_time_fee:extraTotal||0,due_date:due||null,status:'PENDENTE',origin:'NFSE',...nfsePayload}));
   }
   if(err)return toast('Erro ao salvar NFS-e: '+err.message,'error');
-  toast(statusNfse==='EMITIDA'?'NFS-e salva como Emitida!':'NFS-e salva como Pendente!','success');
   _nfseCurrentData=null;
+  toast(statusNfse==='EMITIDA'?'NFS-e salva como Emitida! ✓':'NFS-e salva como Pendente!','success');
   document.getElementById('nfse-email-template').style.display='none';
-  document.getElementById('nfse-preview-area').innerHTML='<div class="empty"><div class="empty-icon"></div><div class="empty-text">NFS-e salva! Preencha novamente para gerar outra.</div></div>';
+  document.getElementById('nfse-preview-area').innerHTML='<div class="empty"><div class="empty-icon">✓</div><div class="empty-text">NFS-e salva! Preencha novamente para gerar outra.</div></div>';
   loadNfseHistory();
 }
 
