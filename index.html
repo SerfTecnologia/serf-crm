@@ -1367,7 +1367,6 @@ function withSave(btn, fn) {
   if (_saving) return;
   _saving = true;
   if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Salvando...'; }
-  // Safety: force-reset after 8s to avoid permanent "Salvando..." lock
   _savingTimer = setTimeout(() => { _saving = false; if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Salvar'; } }, 8000);
   Promise.resolve(fn()).finally(() => {
     clearTimeout(_savingTimer);
@@ -1376,7 +1375,10 @@ function withSave(btn, fn) {
   });
 }
 
-// ── RELOAD BUTTON: adds refresh icon to topbar
+// ── DEBOUNCE HELPER ── prevents rapid-fire calls
+function debounce(fn, ms=400){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+
+// ── RELOAD BUTTON
 function addReloadBtn() {
   const actions = document.getElementById('topbar-actions');
   if (actions && !document.getElementById('btn-reload-page')) {
@@ -1423,22 +1425,72 @@ let _currentPage='dashboard';
 
 // ── REALTIME: atualiza a pagina aberta automaticamente sem F5 ─
 let _realtimeChannel=null;
+// Debounced dashboard refresh — só dispara 1x mesmo que várias tabelas mudem juntas
+const _debouncedDashboard = debounce(()=>{ if(_currentPage==='dashboard') loadDashboard(); }, 1200);
+
 function setupRealtime(){
   if(_realtimeChannel)sb.removeChannel(_realtimeChannel);
   _realtimeChannel=sb.channel('crm-realtime')
-    .on('postgres_changes',{event:'*',schema:'public',table:'clients'},()=>{cacheInvalidate('clients','allClients');if(_currentPage==='clientes')loadClients();loadDashboard();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'tickets'},()=>{cacheInvalidate('tickets');if(_currentPage==='chamados')loadTickets();loadDashboard();checkAgendaNotifications();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'agenda'},()=>{cacheInvalidate('agenda');if(_currentPage==='agenda'){renderAgendaCalendar();loadAgendaEvents();}checkAgendaNotifications();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'work_orders'},()=>{cacheInvalidate('work_orders');if(_currentPage==='ordens')loadWorkOrders();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'contracts'},()=>{cacheInvalidate('contracts');if(_currentPage==='contratos')loadContracts();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'prospects'},()=>{cacheInvalidate('prospects');if(_currentPage==='prospeccao')loadProspects();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'social_posts'},()=>{cacheInvalidate('social_posts');if(_currentPage.startsWith('social'))loadSocialDashboard();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'assets'},()=>{cacheInvalidate('assets');if(_currentPage==='inventario')loadInventory();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'user_profiles'},()=>{cacheInvalidate('allUsers');loadAllUsers();if(_currentPage==='usuarios')loadUsers();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'plans'},()=>{cacheInvalidate('allPlans');loadAllPlans();if(_currentPage==='planos')loadPlans();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'services'},()=>{cacheInvalidate('allServices');loadAllServices();if(_currentPage==='servicos-avulsos')loadServicesCatalog();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'password_vault'},()=>{if(_currentPage==='cofre')loadVault();})
-    .on('postgres_changes',{event:'*',schema:'public',table:'billings'},()=>{cacheInvalidate('billings');if(_currentPage==='financeiro')loadBillings();if(_currentPage==='nfse')loadNfseHistory();loadDashboard();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'clients'},()=>{
+      cacheInvalidate('clients','allClients');
+      if(_currentPage==='clientes')loadClients();
+      _debouncedDashboard();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'tickets'},()=>{
+      cacheInvalidate('tickets');
+      if(_currentPage==='chamados')loadTickets();
+      _debouncedDashboard();
+      debounce(checkAgendaNotifications,1500)();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'agenda'},()=>{
+      cacheInvalidate('agenda');
+      if(_currentPage==='agenda'){renderAgendaCalendar();loadAgendaEvents();}
+      debounce(checkAgendaNotifications,1500)();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'work_orders'},()=>{
+      cacheInvalidate('work_orders');
+      if(_currentPage==='ordens')loadWorkOrders();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'contracts'},()=>{
+      cacheInvalidate('contracts');
+      if(_currentPage==='contratos')loadContracts();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'prospects'},()=>{
+      cacheInvalidate('prospects');
+      if(_currentPage==='prospeccao')loadProspects();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'social_posts'},()=>{
+      cacheInvalidate('social_posts');
+      if(_currentPage.startsWith('social'))loadSocialDashboard();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'assets'},()=>{
+      cacheInvalidate('assets');
+      if(_currentPage==='inventario')loadInventory();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'user_profiles'},()=>{
+      cacheInvalidate('allUsers');
+      loadAllUsers();
+      if(_currentPage==='usuarios')loadUsers();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'plans'},()=>{
+      cacheInvalidate('allPlans');
+      loadAllPlans();
+      if(_currentPage==='planos')loadPlans();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'services'},()=>{
+      cacheInvalidate('allServices');
+      loadAllServices();
+      if(_currentPage==='servicos-avulsos')loadServicesCatalog();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'password_vault'},()=>{
+      if(_currentPage==='cofre')loadVault();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'billings'},()=>{
+      cacheInvalidate('billings');
+      if(_currentPage==='financeiro')loadBillings();
+      if(_currentPage==='nfse')loadNfseHistory();
+      _debouncedDashboard();
+    })
     .subscribe();
 }
 
@@ -1649,15 +1701,114 @@ function fmtDatetime(d){if(!d)return'--';try{return new Date(d).toLocaleString('
 function toggleBlur(id,btn){const el=document.getElementById(id);if(!el)return;el.classList.toggle('blurred');btn.title=el.classList.contains('blurred')?'Mostrar':'Ocultar';}
 function createOSFromTicket(){const c=document.getElementById('t-client').value;closeModal('modal-ticket');openWOModal(null,c);}
 async function loadAgendaTypes(){const{data}=await sb.from('agenda_types').select('*').eq('active',true).order('name');allAgendaTypes=data||[];}
-async function loadAgendaEvents(){const y=agendaCurrentDate.getFullYear(),m=agendaCurrentDate.getMonth();const{data}=await sb.from('agenda').select('*,user_profiles(name),clients(razao_social),agenda_types(name,color,icon)').gte('start_datetime',new Date(y,m,1).toISOString()).lte('start_datetime',new Date(y,m+1,0,23,59,59).toISOString()).order('start_datetime');agendaEvents=data||[];renderAgendaCalendar();checkAgendaNotifications();}
-function renderAgendaCalendar(){const y=agendaCurrentDate.getFullYear(),m=agendaCurrentDate.getMonth();document.getElementById('agenda-month-label').textContent=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});const fd=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),today=new Date();let cells='';for(let i=0;i<fd;i++)cells+=`<div class="agenda-cal-cell other-month"></div>`;for(let d=1;d<=days;d++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,isT=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d,isSel=agendaSelectedDate===ds,evs=agendaEvents.filter(e=>e.start_datetime?.startsWith(ds));cells+=`<div class="agenda-cal-cell${isT||isSel?' today':''}" onclick="selectAgendaDay('${ds}')"><div class="agenda-cal-cell-num" style="${isT?'color:#0C447C;font-weight:800':''}">${d}</div>${evs.slice(0,2).map(e=>`<div class="agenda-event" style="background:${e.agenda_types?.color||'#0C447C'}">${e.title.substring(0,12)}</div>`).join('')}</div>`;}document.getElementById('agenda-cal-cells').innerHTML=cells;const usel=document.getElementById('filter-agenda-user');if(usel)usel.innerHTML='<option value="">Todos</option>'+allUsers.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');renderAgendaTypes();}
-function agendaNav(dir){agendaCurrentDate.setMonth(agendaCurrentDate.getMonth()+dir);loadAgendaEvents();}
-function selectAgendaDay(ds){agendaSelectedDate=ds;document.getElementById('agenda-day-label').textContent='Atividades: '+new Date(ds+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});renderAgendaDay();renderAgendaCalendar();}
-function renderAgendaDay(){if(!agendaSelectedDate){document.getElementById('agenda-day-events').innerHTML='<div class="empty"><div class="empty-text">Selecione um dia</div></div>';return;}const uf=document.getElementById('filter-agenda-user')?.value||'';let evs=agendaEvents.filter(e=>e.start_datetime?.startsWith(agendaSelectedDate));if(uf)evs=evs.filter(e=>e.assigned_to===uf);const el=document.getElementById('agenda-day-events');if(!evs.length){el.innerHTML='<div class="empty"><div class="empty-text">Nenhuma atividade</div></div>';return;}el.innerHTML=evs.map(e=>{const color=e.agenda_types?.color||'#0C447C',viewed=Array.isArray(e.viewed_by)&&e.viewed_by.includes(currentUserProfile?.id);return`<div class="agenda-list-item"><div class="agenda-list-dot" style="background:${color}"></div><div style="flex:1" onclick="markAgendaViewed('${e.id}')"><div style="font-size:13px;font-weight:600">${e.agenda_types?.icon||''} ${e.title}${!viewed&&e.assigned_to===currentUserProfile?.id?'<span style="color:#A32D2D;margin-left:4px;font-size:11px">NOVO</span>':''}</div><div style="font-size:11px;color:var(--sub)">${fmtDatetime(e.start_datetime)} | ${e.user_profiles?.name||'--'}${e.clients?' | '+e.clients.razao_social:''}</div></div><div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick='openAgendaEdit(${JSON.stringify(e)})'>E</button><button class="btn btn-sm btn-danger" onclick='deleteAgendaItem("${e.id}")'>X</button></div></div>`;}).join('');}
-async function markAgendaViewed(id){const e=agendaEvents.find(x=>x.id===id);if(!e||e.assigned_to!==currentUserProfile?.id)return;const v=Array.isArray(e.viewed_by)?e.viewed_by:[];if(!v.includes(currentUserProfile.id)){await sb.from('agenda').update({viewed_by:[...v,currentUserProfile.id]}).eq('id',id);loadAgendaEvents();}}
-async function checkAgendaNotifications(){if(!currentUserProfile)return;const{data}=await sb.from('agenda').select('id,viewed_by').eq('assigned_to',currentUserProfile.id).gte('start_datetime',new Date().toISOString()).limit(50);const unv=(data||[]).filter(e=>!Array.isArray(e.viewed_by)||!e.viewed_by.includes(currentUserProfile.id));const badge=document.getElementById('badge-agenda'),nc=document.getElementById('notif-count');if(unv.length){if(badge){badge.style.display='inline';badge.textContent=unv.length;}if(nc){nc.style.display='block';nc.textContent=unv.length;}if(!document.getElementById('page-agenda')?.classList.contains('active')){let nb=document.getElementById('agenda-notif-persistent');if(!nb){nb=document.createElement('div');nb.id='agenda-notif-persistent';nb.className='agenda-notif-badge';nb.onclick=()=>{showPage('agenda',document.querySelector('.sb-item[onclick*=agenda]'));nb.remove();};document.body.appendChild(nb);}nb.innerHTML=`&#128197; Voce tem ${unv.length} notificacao(oes) nova(s) na agenda &mdash; <u>clique para ver</u>`;}}else{if(badge)badge.style.display='none';if(nc)nc.style.display='none';}}
-function renderAgendaTypes(){const el=document.getElementById('agenda-types-list');if(!el)return;el.innerHTML=allAgendaTypes.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #F1EFE8"><span style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;flex-shrink:0"></span><span style="font-size:12px;flex:1">${t.icon||''} ${t.name}</span><button class="btn btn-sm" onclick='openAgendaTypeEdit(${JSON.stringify(t)})'>E</button><button class="btn btn-sm btn-danger" onclick="deleteAgendaType('${t.id}')">X</button></div>`).join('');const sel=document.getElementById('ag-type');if(sel)sel.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');}
-function openAgendaModal(){populateUserSelect('ag-assigned');populateClientSelect('ag-client');document.getElementById('ag-id').value='';document.getElementById('ag-title').value='';document.getElementById('ag-description').value='';const now=new Date();now.setMinutes(0,0,0);document.getElementById('ag-start').value=now.toISOString().slice(0,16);document.getElementById('ag-end').value=new Date(now.getTime()+3600000).toISOString().slice(0,16);document.getElementById('ag-modal-title').textContent='Nova Atividade';sb.from('tickets').select('id,title').neq('status','FECHADO').then(({data})=>{const ts=document.getElementById('ag-ticket');if(ts)ts.innerHTML='<option value="">Nenhum</option>'+(data||[]).map(t=>`<option value="${t.id}">${t.title}</option>`).join('');});openModal('modal-agenda');}
+async function loadAgendaEvents(){
+  const y=agendaCurrentDate.getFullYear(),m=agendaCurrentDate.getMonth();
+  const from=new Date(y,m,1).toISOString();
+  const to=new Date(y,m+1,0,23,59,59).toISOString();
+  const{data,error}=await sb.from('agenda')
+    .select('*,user_profiles(name),clients(razao_social)')
+    .gte('start_datetime',from).lte('start_datetime',to)
+    .order('start_datetime');
+  if(error)console.warn('Agenda load error:',error.message);
+  agendaEvents=(data||[]).map(e=>({
+    ...e,
+    _color: e.color||'#0C447C',
+    _typeName: e.agenda_type||'TAREFA'
+  }));
+  renderAgendaCalendar();
+  checkAgendaNotifications();
+}
+
+function renderAgendaCalendar(){
+  const y=agendaCurrentDate.getFullYear(),m=agendaCurrentDate.getMonth();
+  const lbl=document.getElementById('agenda-month-label');
+  if(lbl)lbl.textContent=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const fd=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),today=new Date();
+  let cells='';
+  for(let i=0;i<fd;i++)cells+=`<div class="agenda-cal-cell other-month"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isT=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
+    const isSel=agendaSelectedDate===ds;
+    const evs=agendaEvents.filter(e=>e.start_datetime?.startsWith(ds));
+    cells+=`<div class="agenda-cal-cell${isT||isSel?' today':''}" onclick="selectAgendaDay('${ds}')">
+      <div class="agenda-cal-cell-num" style="${isT?'color:#0C447C;font-weight:800':''}">${d}</div>
+      ${evs.slice(0,2).map(e=>`<div class="agenda-event" style="background:${e._color}">${(e.title||'').substring(0,12)}</div>`).join('')}
+      ${evs.length>2?`<div style="font-size:9px;color:var(--sub)">+${evs.length-2}</div>`:''}
+    </div>`;
+  }
+  const cellsEl=document.getElementById('agenda-cal-cells');
+  if(cellsEl)cellsEl.innerHTML=cells;
+  // user filter
+  const usel=document.getElementById('filter-agenda-user');
+  if(usel)usel.innerHTML='<option value="">Todos</option>'+allUsers.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  renderAgendaTypes();
+  // re-render day if selected
+  if(agendaSelectedDate)renderAgendaDay();
+}
+
+function selectAgendaDay(ds){
+  agendaSelectedDate=ds;
+  const lbl=document.getElementById('agenda-day-label');
+  if(lbl)lbl.textContent='Atividades: '+new Date(ds+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  renderAgendaDay();
+  renderAgendaCalendar();
+}
+
+function renderAgendaDay(){
+  if(!agendaSelectedDate){const el=document.getElementById('agenda-day-events');if(el)el.innerHTML='<div class="empty"><div class="empty-text">Selecione um dia no calendário</div></div>';return;}
+  const uf=document.getElementById('filter-agenda-user')?.value||'';
+  let evs=agendaEvents.filter(e=>e.start_datetime?.startsWith(agendaSelectedDate));
+  if(uf)evs=evs.filter(e=>e.assigned_to===uf);
+  const el=document.getElementById('agenda-day-events');
+  if(!el)return;
+  if(!evs.length){el.innerHTML='<div class="empty"><div class="empty-text">Nenhuma atividade neste dia</div></div>';return;}
+  el.innerHTML=evs.map(e=>{
+    const color=e._color||'#0C447C';
+    const viewed=Array.isArray(e.viewed_by)&&e.viewed_by.includes(currentUserProfile?.id);
+    const isNew=!viewed&&e.assigned_to===currentUserProfile?.id;
+    const timeStr=e.start_datetime?new Date(e.start_datetime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    return`<div class="agenda-list-item">
+      <div class="agenda-list-dot" style="background:${color}"></div>
+      <div style="flex:1;cursor:pointer" onclick="markAgendaViewed('${e.id}')">
+        <div style="font-size:13px;font-weight:600">${e._typeName||''} ${e.title||''}${isNew?'<span style="color:#A32D2D;margin-left:6px;font-size:10px;font-weight:700">● NOVO</span>':''}</div>
+        <div style="font-size:11px;color:var(--sub)">${timeStr}${e.end_datetime?' – '+new Date(e.end_datetime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}${e.user_profiles?' · '+e.user_profiles.name:''}${e.clients?' · '+e.clients.razao_social:''}</div>
+        ${e.description?`<div style="font-size:12px;margin-top:3px;color:var(--sub)">${e.description}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="btn btn-sm btn-primary" onclick='openAgendaEdit(${JSON.stringify(e)})'>✏</button>
+        <button class="btn btn-sm btn-danger" onclick='deleteAgendaItem("${e.id}")'>✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAgendaModal(){
+  populateUserSelect('ag-assigned',currentUserProfile?.id||'');
+  populateClientSelect('ag-client');
+  document.getElementById('ag-id').value='';
+  document.getElementById('ag-title').value='';
+  document.getElementById('ag-description').value='';
+  const now=new Date();now.setMinutes(0,0,0);
+  document.getElementById('ag-start').value=now.toISOString().slice(0,16);
+  document.getElementById('ag-end').value=new Date(now.getTime()+3600000).toISOString().slice(0,16);
+  document.getElementById('ag-modal-title').textContent='Nova Atividade';
+  // Populate type select
+  const ts=document.getElementById('ag-type');
+  if(ts){
+    if(allAgendaTypes.length){
+      ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');
+    } else {
+      ts.innerHTML='<option value="">Sem tipo</option>';
+    }
+  }
+  // Populate linked ticket
+  sb.from('tickets').select('id,title').neq('status','FECHADO').order('opened_at',{ascending:false}).limit(50).then(({data})=>{
+    const tk=document.getElementById('ag-ticket');
+    if(tk)tk.innerHTML='<option value="">Nenhum</option>'+(data||[]).map(t=>`<option value="${t.id}">${t.title}</option>`).join('');
+  });
+  openModal('modal-agenda');
+}
 function openAgendaEdit(item){populateUserSelect('ag-assigned',item.assigned_to);populateClientSelect('ag-client',item.client_id);document.getElementById('ag-id').value=item.id;document.getElementById('ag-title').value=item.title;document.getElementById('ag-description').value=item.description||'';if(item.start_datetime)document.getElementById('ag-start').value=item.start_datetime.slice(0,16);if(item.end_datetime)document.getElementById('ag-end').value=item.end_datetime.slice(0,16);document.getElementById('ag-modal-title').textContent='Editar Atividade';openModal('modal-agenda');}
 async function saveAgendaItem(){const id=document.getElementById('ag-id').value;const typeId=document.getElementById('ag-type').value,typeObj=allAgendaTypes.find(t=>t.id===typeId),assignedTo=document.getElementById('ag-assigned').value||null;const p={title:document.getElementById('ag-title').value,description:document.getElementById('ag-description').value,agenda_type:typeObj?.name||'TAREFA',color:typeObj?.color||'#0C447C',start_datetime:document.getElementById('ag-start').value||null,end_datetime:document.getElementById('ag-end').value||null,assigned_to:assignedTo,client_id:document.getElementById('ag-client').value||null,ticket_id:document.getElementById('ag-ticket')?.value||null,created_by:currentUserProfile?.id,viewed_by:assignedTo&&assignedTo!==currentUserProfile?.id?[]:[currentUserProfile?.id]};if(!p.title)return toast('Titulo obrigatorio','error');let err;if(id){({error:err}=await sb.from('agenda').update(p).eq('id',id));}else{({error:err}=await sb.from('agenda').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-agenda');toast(id?'Atualizado!':'Criado!','success');}
 async function deleteAgendaItem(id){if(!confirm('Excluir atividade?'))return;await sb.from('agenda').delete().eq('id',id);toast('Removido!','success');}
