@@ -596,7 +596,11 @@ tr:hover td{background:#FAFAF7}
   <div class="section">
     <div class="card-header">
       <span class="card-title">Clientes</span>
-      <input type="text" id="search-clients" placeholder="Buscar cliente..." oninput="filterClients()" style="padding:7px 12px;border-radius:7px;border:1px solid var(--border);font-size:12px;width:200px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="search-clients" placeholder="Buscar cliente..." oninput="filterClients()" style="padding:7px 12px;border-radius:7px;border:1px solid var(--border);font-size:12px;width:180px">
+        <button class="btn btn-sm" onclick="exportClientTemplate()" title="Baixar modelo Excel">⬇ Modelo</button>
+        <label class="btn btn-sm" style="cursor:pointer" title="Importar planilha Excel">⬆ Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importClients(this.files[0]).then(()=>loadClients())"></label>
+      </div>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Cliente</th><th>CNPJ</th><th>Plano</th><th>Mensalidade</th><th>Chamados</th><th>Status</th><th>Ações</th></tr></thead>
@@ -662,12 +666,16 @@ tr:hover td{background:#FAFAF7}
   <div class="section">
     <div class="card-header">
       <span class="card-title">Inventário de TI</span>
-      <select id="filter-inv-client" onchange="loadInventory()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
-        <option value="">Todos os clientes</option>
-      </select>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="filter-inv-client" onchange="loadInventory()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
+          <option value="">Todos os clientes</option>
+        </select>
+        <button class="btn btn-sm" onclick="exportInventoryTemplate()" title="Baixar modelo Excel">⬇ Modelo</button>
+        <label class="btn btn-sm" style="cursor:pointer" title="Importar planilha Excel">⬆ Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importInventory(this.files[0],document.getElementById('filter-inv-client').value).then(()=>loadInventory())"></label>
+      </div>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Cliente</th><th>Equipamento</th><th>Tipo</th><th>Nº Série</th><th>IP</th><th>Local</th><th>Fotos</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Cliente</th><th>Equipamento</th><th>Tipo</th><th>Nº Série</th><th>IP</th><th>Local</th><th>Acesso Remoto</th><th>Fotos</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="inventory-table-body"><tr><td colspan="9" class="loading">Carregando...</td></tr></tbody>
     </table></div>
   </div>
@@ -683,10 +691,14 @@ tr:hover td{background:#FAFAF7}
   <div class="section">
     <div class="card-header">
       <span class="card-title">Leads</span>
-      <select id="filter-prospect-stage" onchange="loadProspects()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
-        <option value="">Todas etapas</option><option value="LEAD">Lead</option><option value="QUALIFICADO">Qualificado</option>
-        <option value="PROPOSTA">Proposta</option><option value="NEGOCIACAO">Negociação</option><option value="FECHADO_GANHO">Fechado</option><option value="INATIVO">Inativo</option>
-      </select>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="filter-prospect-stage" onchange="loadProspects()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px">
+          <option value="">Todas etapas</option><option value="LEAD">Lead</option><option value="QUALIFICADO">Qualificado</option>
+          <option value="PROPOSTA">Proposta</option><option value="NEGOCIACAO">Negociação</option><option value="FECHADO_GANHO">Fechado</option><option value="INATIVO">Inativo</option>
+        </select>
+        <button class="btn btn-sm" onclick="exportProspectTemplate()" title="Baixar modelo Excel">⬇ Modelo</button>
+        <label class="btn btn-sm" style="cursor:pointer" title="Importar leads do Excel">⬆ Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importProspects(this.files[0]).then(()=>loadProspects())"></label>
+      </div>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Empresa</th><th>Contato</th><th>Telefone</th><th>Etapa</th><th>Responsável</th><th>Próximo passo</th><th>Ações</th></tr></thead>
@@ -1063,10 +1075,17 @@ tr:hover td{background:#FAFAF7}
       <div class="form-group"><label>Plano</label><select id="c-plan-id" onchange="applyPlanDefaults()"></select></div>
       <div class="form-group"><label>Limite de chamados/mês</label><input type="number" id="c-tickets-limit" value="9999"></div>
     </div>
-    <div class="grid2">
-      <div class="form-group"><label>Telefone</label><input type="text" id="c-phone"></div>
-      <div class="form-group"><label>E-mail</label><input type="email" id="c-email"></div>
+    <!-- Multiple phones -->
+    <div class="form-group">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <label style="margin:0">Telefones</label>
+        <button class="btn btn-sm" onclick="addPhoneField('c-phones-list')" type="button">+ Telefone</button>
+      </div>
+      <div id="c-phones-list">
+        <div style="display:flex;gap:6px;margin-bottom:4px"><input type="text" id="c-phone" placeholder="Telefone principal" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px"></div>
+      </div>
     </div>
+    <div class="form-group"><label>E-mail</label><input type="email" id="c-email"></div>
     <div class="form-group"><label>Endereço</label><input type="text" id="c-address"></div>
     <div class="grid2">
       <div class="form-group"><label>Contato</label><input type="text" id="c-contact"></div>
@@ -1127,10 +1146,17 @@ tr:hover td{background:#FAFAF7}
       <div class="form-group"><label>Empresa *</label><input type="text" id="p-company"></div>
       <div class="form-group"><label>Contato</label><input type="text" id="p-contact"></div>
     </div>
-    <div class="grid2">
-      <div class="form-group"><label>Telefone</label><input type="text" id="p-phone"></div>
-      <div class="form-group"><label>E-mail</label><input type="email" id="p-email"></div>
+    <!-- Multiple phones -->
+    <div class="form-group">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <label style="margin:0">Telefones</label>
+        <button class="btn btn-sm" onclick="addPhoneField('p-phones-list')" type="button">+ Telefone</button>
+      </div>
+      <div id="p-phones-list">
+        <div style="display:flex;gap:6px;margin-bottom:4px"><input type="text" id="p-phone" placeholder="Telefone principal" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px"></div>
+      </div>
     </div>
+    <div class="form-group"><label>E-mail</label><input type="email" id="p-email"></div>
     <div class="grid2">
       <div class="form-group"><label>Etapa</label>
         <select id="p-stage">
@@ -1236,7 +1262,7 @@ tr:hover td{background:#FAFAF7}
       <div class="form-group"><label>Nome *</label><input type="text" id="inv-name"></div>
     </div>
     <div class="grid2">
-      <div class="form-group"><label>Tipo</label><select id="inv-type"><option value="Computador">Computador</option><option value="Notebook">Notebook</option><option value="Servidor">Servidor</option><option value="Impressora">Impressora</option><option value="Roteador">Roteador/Switch</option><option value="NAS">NAS/Backup</option><option value="Outro">Outro</option></select></div>
+      <div class="form-group"><label>Tipo</label><select id="inv-type" onchange="onInvTypeChange(this)"><option value="Computador">Computador</option><option value="Notebook">Notebook</option><option value="Tablet">Tablet</option><option value="Celular">Celular</option><option value="Servidor">Servidor</option><option value="Impressora">Impressora</option><option value="Roteador">Roteador/Switch</option><option value="NAS">NAS/Backup</option><option value="Outro">Outro</option></select></div>
       <div class="form-group"><label>Nº Série</label><input type="text" id="inv-serial"></div>
     </div>
     <div class="grid2">
@@ -1244,6 +1270,14 @@ tr:hover td{background:#FAFAF7}
       <div class="form-group"><label>Localização</label><input type="text" id="inv-location"></div>
     </div>
     <div class="form-group"><label>Status</label><select id="inv-status"><option value="ATIVO">Ativo</option><option value="MANUTENÇÃO">Em manutenção</option><option value="INATIVO">Inativo</option></select></div>
+    <!-- Remote Access Section (hidden for impressoras) -->
+    <div id="inv-remote-section" style="background:#F7F5EE;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px">Acessos Remotos</span>
+        <button class="btn btn-sm btn-primary" onclick="addRemoteAccessRow()" type="button">+ Adicionar</button>
+      </div>
+      <div id="inv-remote-list"></div>
+    </div>
     <div class="form-group"><label>Observações</label><textarea id="inv-notes" rows="2"></textarea></div>
     <div class="form-group">
       <label>Fotos</label>
@@ -1697,6 +1731,114 @@ function openTicketEditFromDetail(){
 
 function fmtDatetime(d){if(!d)return'--';try{return new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return d;}}
 
+// ── PHONE LIST HELPERS ──────────────────────────────────────────
+function addPhoneField(listId){
+  const list=document.getElementById(listId);if(!list)return;
+  const d=document.createElement('div');d.style.cssText='display:flex;gap:6px;margin-bottom:4px';
+  d.innerHTML=`<input type="text" placeholder="Telefone adicional" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px"><button class="btn btn-sm btn-danger" onclick="this.closest('div').remove()" type="button">✕</button>`;
+  list.appendChild(d);
+}
+function resetPhoneList(listId, mainId, extras=[]){
+  const list=document.getElementById(listId);if(!list)return;
+  // Remove extra rows (keep only first child which has the main input)
+  while(list.children.length>1)list.removeChild(list.lastChild);
+  extras.forEach(ph=>{if(!ph)return;const d=document.createElement('div');d.style.cssText='display:flex;gap:6px;margin-bottom:4px';d.innerHTML=`<input type="text" placeholder="Telefone adicional" value="${ph}" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px"><button class="btn btn-sm btn-danger" onclick="this.closest('div').remove()" type="button">✕</button>`;list.appendChild(d);});
+}
+function getExtraPhones(listId){
+  const list=document.getElementById(listId);if(!list)return[];
+  return Array.from(list.querySelectorAll('input[placeholder="Telefone adicional"]')).map(i=>i.value.trim()).filter(Boolean);
+}
+
+// ── EXCEL IMPORT / EXPORT ───────────────────────────────────────
+// Uses SheetJS via CDN (loaded lazily)
+async function loadSheetJS(){
+  if(window.XLSX)return;
+  await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+}
+
+// Export template (blank) for clients
+async function exportClientTemplate(){
+  await loadSheetJS();
+  const headers=[['razao_social','cnpj','phone','email','address','contact_name','status']];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(headers),'Clientes');
+  XLSX.writeFile(wb,'modelo_clientes.xlsx');
+  toast('Modelo exportado!','success');
+}
+async function importClients(file){
+  if(!file)return;
+  await loadSheetJS();
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data);
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  if(!rows.length)return toast('Planilha vazia','error');
+  let added=0,skipped=0;
+  for(const r of rows){
+    const name=(r.razao_social||'').trim();if(!name){skipped++;continue;}
+    const{data:exist}=await sb.from('clients').select('id').eq('razao_social',name).limit(1);
+    if(exist?.length){skipped++;continue;}
+    await sb.from('clients').insert({razao_social:name,cnpj:r.cnpj||null,phone:r.phone||null,email:r.email||null,address:r.address||null,contact_name:r.contact_name||null,status:r.status||'ATIVO',tickets_limit:9999});
+    added++;
+  }
+  toast(`Importados: ${added} | Ignorados: ${skipped}`,'success');
+  await loadAllClients();
+}
+
+// Export template for inventory
+async function exportInventoryTemplate(){
+  await loadSheetJS();
+  const headers=[['asset_name','asset_type','serial_number','ip_address','location','status','asset_notes']];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(headers),'Inventario');
+  XLSX.writeFile(wb,'modelo_inventario.xlsx');
+  toast('Modelo exportado!','success');
+}
+async function importInventory(file,clientId){
+  if(!file)return;
+  if(!clientId)return toast('Selecione um cliente antes de importar','error');
+  await loadSheetJS();
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data);
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  if(!rows.length)return toast('Planilha vazia','error');
+  let added=0,skipped=0;
+  for(const r of rows){
+    const name=(r.asset_name||'').trim();if(!name){skipped++;continue;}
+    const{data:exist}=await sb.from('assets').select('id').eq('asset_name',name).eq('client_id',clientId).limit(1);
+    if(exist?.length){skipped++;continue;}
+    await sb.from('assets').insert({client_id:clientId,asset_name:name,asset_type:r.asset_type||'Computador',serial_number:r.serial_number||null,ip_address:r.ip_address||null,location:r.location||null,status:r.status||'ATIVO',asset_notes:r.asset_notes||null,remote_access:[]});
+    added++;
+  }
+  toast(`Importados: ${added} | Ignorados: ${skipped}`,'success');
+}
+
+// Export template for prospects
+async function exportProspectTemplate(){
+  await loadSheetJS();
+  const headers=[['company_name','contact_name','phone','email','funnel_stage','notes']];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(headers),'Prospeccao');
+  XLSX.writeFile(wb,'modelo_prospeccao.xlsx');
+  toast('Modelo exportado!','success');
+}
+async function importProspects(file){
+  if(!file)return;
+  await loadSheetJS();
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data);
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  if(!rows.length)return toast('Planilha vazia','error');
+  let added=0,skipped=0;
+  for(const r of rows){
+    const name=(r.company_name||'').trim();if(!name){skipped++;continue;}
+    const{data:exist}=await sb.from('prospects').select('id').eq('company_name',name).limit(1);
+    if(exist?.length){skipped++;continue;}
+    await sb.from('prospects').insert({company_name:name,contact_name:r.contact_name||null,phone:r.phone||null,email:r.email||null,funnel_stage:r.funnel_stage||'LEAD',notes:r.notes||null});
+    added++;
+  }
+  toast(`Importados: ${added} | Ignorados: ${skipped}`,'success');
+}
+
 // blur toggle for dashboard
 function toggleBlur(id,btn){const el=document.getElementById(id);if(!el)return;el.classList.toggle('blurred');btn.title=el.classList.contains('blurred')?'Mostrar':'Ocultar';}
 function createOSFromTicket(){const c=document.getElementById('t-client').value;closeModal('modal-ticket');openWOModal(null,c);}
@@ -1809,13 +1951,59 @@ function openAgendaModal(){
   });
   openModal('modal-agenda');
 }
-function openAgendaEdit(item){populateUserSelect('ag-assigned',item.assigned_to);populateClientSelect('ag-client',item.client_id);document.getElementById('ag-id').value=item.id;document.getElementById('ag-title').value=item.title;document.getElementById('ag-description').value=item.description||'';if(item.start_datetime)document.getElementById('ag-start').value=item.start_datetime.slice(0,16);if(item.end_datetime)document.getElementById('ag-end').value=item.end_datetime.slice(0,16);document.getElementById('ag-modal-title').textContent='Editar Atividade';openModal('modal-agenda');}
-async function saveAgendaItem(){const id=document.getElementById('ag-id').value;const typeId=document.getElementById('ag-type').value,typeObj=allAgendaTypes.find(t=>t.id===typeId),assignedTo=document.getElementById('ag-assigned').value||null;const p={title:document.getElementById('ag-title').value,description:document.getElementById('ag-description').value,agenda_type:typeObj?.name||'TAREFA',color:typeObj?.color||'#0C447C',start_datetime:document.getElementById('ag-start').value||null,end_datetime:document.getElementById('ag-end').value||null,assigned_to:assignedTo,client_id:document.getElementById('ag-client').value||null,ticket_id:document.getElementById('ag-ticket')?.value||null,created_by:currentUserProfile?.id,viewed_by:assignedTo&&assignedTo!==currentUserProfile?.id?[]:[currentUserProfile?.id]};if(!p.title)return toast('Titulo obrigatorio','error');let err;if(id){({error:err}=await sb.from('agenda').update(p).eq('id',id));}else{({error:err}=await sb.from('agenda').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-agenda');toast(id?'Atualizado!':'Criado!','success');}
-async function deleteAgendaItem(id){if(!confirm('Excluir atividade?'))return;await sb.from('agenda').delete().eq('id',id);toast('Removido!','success');}
+function agendaNav(dir){agendaCurrentDate.setMonth(agendaCurrentDate.getMonth()+dir);loadAgendaEvents();}
+function openAgendaEdit(item){
+  populateUserSelect('ag-assigned',item.assigned_to);
+  populateClientSelect('ag-client',item.client_id);
+  document.getElementById('ag-id').value=item.id;
+  document.getElementById('ag-title').value=item.title;
+  document.getElementById('ag-description').value=item.description||'';
+  if(item.start_datetime)document.getElementById('ag-start').value=item.start_datetime.slice(0,16);
+  if(item.end_datetime)document.getElementById('ag-end').value=item.end_datetime.slice(0,16);
+  const ts=document.getElementById('ag-type');
+  if(ts){
+    ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');
+    const matched=allAgendaTypes.find(t=>t.name===item.agenda_type);
+    if(matched)ts.value=matched.id;
+  }
+  document.getElementById('ag-modal-title').textContent='Editar Atividade';
+  openModal('modal-agenda');
+}
+async function saveAgendaItem(){
+  const id=document.getElementById('ag-id').value;
+  const typeId=document.getElementById('ag-type')?.value;
+  const typeObj=allAgendaTypes.find(t=>t.id===typeId);
+  const assignedTo=document.getElementById('ag-assigned').value||null;
+  const p={
+    title:document.getElementById('ag-title').value,
+    description:document.getElementById('ag-description').value,
+    agenda_type:typeObj?.name||document.getElementById('ag-type')?.selectedOptions[0]?.text||'TAREFA',
+    color:typeObj?.color||'#0C447C',
+    start_datetime:document.getElementById('ag-start').value||null,
+    end_datetime:document.getElementById('ag-end').value||null,
+    assigned_to:assignedTo,
+    client_id:document.getElementById('ag-client').value||null,
+    ticket_id:document.getElementById('ag-ticket')?.value||null,
+    created_by:currentUserProfile?.id,
+    viewed_by:assignedTo&&assignedTo!==currentUserProfile?.id?[]:[currentUserProfile?.id]
+  };
+  if(!p.title)return toast('Titulo obrigatorio','error');
+  let err;
+  if(id){({error:err}=await sb.from('agenda').update(p).eq('id',id));}
+  else{({error:err}=await sb.from('agenda').insert(p));}
+  if(err)return toast('Erro: '+err.message,'error');
+  closeModal('modal-agenda');
+  toast(id?'Atualizado!':'Criado!','success');
+  loadAgendaEvents();
+}
+async function deleteAgendaItem(id){if(!confirm('Excluir atividade?'))return;await sb.from('agenda').delete().eq('id',id);toast('Removido!','success');loadAgendaEvents();}
 function openAgendaTypeModal(){document.getElementById('agt-id').value='';document.getElementById('agt-name').value='';document.getElementById('agt-icon').value='';document.getElementById('agt-color').value='#0C447C';openModal('modal-agenda-type');}
 function openAgendaTypeEdit(t){document.getElementById('agt-id').value=t.id;document.getElementById('agt-name').value=t.name;document.getElementById('agt-icon').value=t.icon||'';document.getElementById('agt-color').value=t.color||'#0C447C';openModal('modal-agenda-type');}
 async function saveAgendaType(){const id=document.getElementById('agt-id').value;const p={name:document.getElementById('agt-name').value,icon:document.getElementById('agt-icon').value,color:document.getElementById('agt-color').value,active:true};if(!p.name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('agenda_types').update(p).eq('id',id));}else{({error:err}=await sb.from('agenda_types').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-agenda-type');toast('Tipo salvo!','success');await loadAgendaTypes();renderAgendaTypes();}
 async function deleteAgendaType(id){if(!confirm('Excluir tipo?'))return;await sb.from('agenda_types').delete().eq('id',id);await loadAgendaTypes();renderAgendaTypes();toast('Excluido!','success');}
+async function markAgendaViewed(id){const e=agendaEvents.find(x=>x.id===id);if(!e||e.assigned_to!==currentUserProfile?.id)return;const v=Array.isArray(e.viewed_by)?e.viewed_by:[];if(!v.includes(currentUserProfile.id)){await sb.from('agenda').update({viewed_by:[...v,currentUserProfile.id]}).eq('id',id);loadAgendaEvents();}}
+async function checkAgendaNotifications(){if(!currentUserProfile)return;try{const{data}=await sb.from('agenda').select('id,viewed_by').eq('assigned_to',currentUserProfile.id).gte('start_datetime',new Date().toISOString()).limit(50);const unv=(data||[]).filter(e=>!Array.isArray(e.viewed_by)||!e.viewed_by.includes(currentUserProfile.id));const badge=document.getElementById('badge-agenda'),nc=document.getElementById('notif-count');if(unv.length){if(badge){badge.style.display='inline';badge.textContent=unv.length;}if(nc){nc.style.display='block';nc.textContent=unv.length;}}else{if(badge)badge.style.display='none';if(nc)nc.style.display='none';}}catch(e){console.warn('notif err',e);}}
+function renderAgendaTypes(){const el=document.getElementById('agenda-types-list');if(!el)return;if(!allAgendaTypes.length){el.innerHTML='<div style="padding:14px;font-size:12px;color:var(--sub);text-align:center">Nenhum tipo. Clique em + Tipo.</div>';return;}el.innerHTML=allAgendaTypes.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #F1EFE8"><span style="width:12px;height:12px;border-radius:50%;background:${t.color||'#0C447C'};display:inline-block;flex-shrink:0"></span><span style="font-size:13px;flex:1">${t.icon||''} ${t.name}</span><button class="btn btn-sm" onclick='openAgendaTypeEdit(${JSON.stringify(t)})'>E</button><button class="btn btn-sm btn-danger" onclick="deleteAgendaType('${t.id}')">X</button></div>`).join('');const sel=document.getElementById('ag-type');if(sel)sel.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');}
 async function loadWorkOrders(){const sf=document.getElementById('filter-wo-status')?.value||'';let q=sb.from('work_orders').select('*,clients(razao_social),user_profiles(name)').order('created_at',{ascending:false});if(sf)q=q.eq('status',sf);if(woTypeFilter)q=q.eq('os_type',woTypeFilter);const{data}=await q.limit(100);const el=document.getElementById('wo-list');if(!data?.length){el.innerHTML='<div class="empty"><div class="empty-text">Nenhuma OS</div></div>';return;}el.innerHTML=data.map(w=>`<div class="wo-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><span class="wo-type-badge wo-${(w.os_type||'servico').toLowerCase()}">${w.os_type||'SERVICO'}</span>${badgeStatus(w.status)}<span style="font-size:11px;color:var(--sub);margin-left:auto">${fmtDatetime(w.scheduled_at||w.created_at)}</span></div><div style="font-weight:600;font-size:13px">${w.title}</div><div style="font-size:12px;color:var(--sub)">${w.clients?.razao_social||'--'} | ${w.user_profiles?.name||'N/A'}</div>${w.description?`<div style="font-size:12px;margin-top:4px">${w.description}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm btn-primary" onclick='openWOEdit(${JSON.stringify(w)})'>Editar</button>${w.status!=='CONCLUIDA'?`<button class="btn btn-sm btn-success" onclick="concludeWO('${w.id}')">Concluir</button>`:''}<button class="btn btn-sm btn-danger" onclick="deleteWO('${w.id}')">Excluir</button></div></div>`).join('');}
 function filterWO(type,btn){woTypeFilter=type;document.querySelectorAll('#page-ordens .tab-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');loadWorkOrders();}
 function openWOModal(ticketId=null,clientId=null){populateClientSelect('wo-client',clientId||'');populateUserSelect('wo-assigned');document.getElementById('wo-id').value='';document.getElementById('wo-title').value='';document.getElementById('wo-description').value='';document.getElementById('wo-tech-notes').value='';document.getElementById('wo-type').value='SERVICO';document.getElementById('wo-status').value='ABERTA';document.getElementById('wo-scheduled').value='';document.getElementById('wo-modal-title').textContent='Nova OS';document.getElementById('wo-services-list').innerHTML='';document.getElementById('wo-total').textContent='R$ 0,00';openModal('modal-workorder');}
@@ -1872,8 +2060,8 @@ function getRWAlternation_DEPRECATED(dateStr) {
 
 function buildDefaultShiftsForDate(dateStr) {
   const dow = new Date(dateStr+'T12:00:00').getDay();
-  if(dow===0||dow===6) return []; // weekend off
-  // Continuous alternation: count weekdays from reference
+  if(dow===0||dow===6) return []; // weekend — both off
+  // Count weekdays from reference to determine alternation
   const ref  = new Date(schedRef.date+'T12:00:00');
   const curr = new Date(dateStr+'T12:00:00');
   let wdCount = 0;
@@ -1884,11 +2072,12 @@ function buildDefaultShiftsForDate(dateStr) {
     if(wd!==0&&wd!==6) wdCount += step;
     d.setDate(d.getDate()+step);
   }
-  // Even => Ruan morning, Wilson afternoon; Odd => Wilson morning, Ruan afternoon
-  const ruanMorning = (wdCount%2===0);
+  // Em dias pares: Wilson manhã (09-13), Ruan tarde (13-18)
+  // Em dias ímpares: Ruan manhã (09-13), Wilson tarde (13-18)
+  const wilsonMorning = (wdCount % 2 === 0);
   return [
-    {member: ruanMorning?'Ruan':'Wilson',  start:'08:00', end:'13:00', type:'serf'},
-    {member: ruanMorning?'Wilson':'Ruan',  start:'13:00', end:'18:00', type:'serf'}
+    {member: wilsonMorning ? 'Wilson' : 'Ruan',   start:'09:00', end:'13:00', type:'serf'},
+    {member: wilsonMorning ? 'Ruan'   : 'Wilson', start:'13:00', end:'18:00', type:'serf'}
   ];
 }
 
@@ -1994,7 +2183,7 @@ function renderSchedule() {
         <strong style="color:${m.color}">${m.name}</strong>
       </div>
       <div style="font-size:11px;color:var(--sub)">
-        Manhas (8h-13h): ${s.manha||0} dias &nbsp;|&nbsp; Tardes (13h-18h): ${s.tarde||0} dias
+        Manhas (9h-13h): ${s.manha||0} dias &nbsp;|&nbsp; Tardes (13h-18h): ${s.tarde||0} dias
       </div>
     </div>`;
   }).join('');
@@ -2188,9 +2377,9 @@ async function saveService(){const id=document.getElementById('svc-id').value;co
 async function deleteService(id){if(!confirm('Excluir servico?'))return;await sb.from('services').delete().eq('id',id);toast('Excluido!','success');}
 async function loadClients(){const{data}=await sb.from('clients').select('*,plans(name,monthly_price)').order('razao_social');const tb=document.getElementById('clients-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-text">Nenhum cliente</div></div></td></tr>';return;}tb.innerHTML=data.map(c=>`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${fmtInitials(c.razao_social)}</div>${c.razao_social}</div></td><td style="font-size:12px;color:var(--sub)">${c.cnpj||'--'}</td><td><strong>${c.plans?.name||c.plan||'--'}</strong></td><td style="font-weight:600;color:var(--accent)">${fmtMoney(c.plans?.monthly_price||0)}</td><td style="font-size:12px">${c.tickets_used||0}/${c.tickets_limit>=9999?'ilim':c.tickets_limit}</td><td>${badgeStatus(c.status)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openClientEdit(${JSON.stringify(c)})'>Editar</button><button class="btn btn-sm" onclick="viewClientInventory('${c.id}')">Inv</button><button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')">X</button></div></td></tr>`).join('');}
 function filterClients(){const q=document.getElementById('search-clients').value.toLowerCase();document.querySelectorAll('#clients-table-body tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});}
-function openClientModal(){populatePlanSelect('c-plan-id');['c-id','c-razao','c-cnpj','c-phone','c-email','c-address','c-contact'].forEach(f=>document.getElementById(f).value='');document.getElementById('c-status').value='ATIVO';document.getElementById('c-tickets-limit').value='9999';document.getElementById('client-modal-title').textContent='Novo Cliente';openModal('modal-client');}
-function openClientEdit(c){populatePlanSelect('c-plan-id',c.plan_id);document.getElementById('c-id').value=c.id;document.getElementById('c-razao').value=c.razao_social;document.getElementById('c-cnpj').value=c.cnpj||'';document.getElementById('c-phone').value=c.phone||'';document.getElementById('c-email').value=c.email||'';document.getElementById('c-address').value=c.address||'';document.getElementById('c-contact').value=c.contact_name||'';document.getElementById('c-status').value=c.status;document.getElementById('c-tickets-limit').value=c.tickets_limit||9999;document.getElementById('client-modal-title').textContent='Editar Cliente';openModal('modal-client');}
-async function saveClient(){const id=document.getElementById('c-id').value;const p={razao_social:document.getElementById('c-razao').value,cnpj:document.getElementById('c-cnpj').value,plan_id:document.getElementById('c-plan-id').value||null,status:document.getElementById('c-status').value,phone:document.getElementById('c-phone').value,email:document.getElementById('c-email').value,address:document.getElementById('c-address').value,contact_name:document.getElementById('c-contact').value,tickets_limit:parseInt(document.getElementById('c-tickets-limit').value)||9999};if(!p.razao_social)return toast('Razao social obrigatoria','error');let err;if(id){({error:err}=await sb.from('clients').update(p).eq('id',id));}else{({error:err}=await sb.from('clients').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-client');toast(id?'Atualizado!':'Cadastrado!','success');}
+function openClientModal(){populatePlanSelect('c-plan-id');['c-id','c-razao','c-cnpj','c-phone','c-email','c-address','c-contact'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('c-status').value='ATIVO';document.getElementById('c-tickets-limit').value='9999';document.getElementById('client-modal-title').textContent='Novo Cliente';resetPhoneList('c-phones-list','c-phone');openModal('modal-client');}
+function openClientEdit(c){populatePlanSelect('c-plan-id',c.plan_id);document.getElementById('c-id').value=c.id;document.getElementById('c-razao').value=c.razao_social;document.getElementById('c-cnpj').value=c.cnpj||'';document.getElementById('c-phone').value=c.phone||'';document.getElementById('c-email').value=c.email||'';document.getElementById('c-address').value=c.address||'';document.getElementById('c-contact').value=c.contact_name||'';document.getElementById('c-status').value=c.status;document.getElementById('c-tickets-limit').value=c.tickets_limit||9999;document.getElementById('client-modal-title').textContent='Editar Cliente';resetPhoneList('c-phones-list','c-phone',c.phones||[]);openModal('modal-client');}
+async function saveClient(){const id=document.getElementById('c-id').value;const extraPhones=getExtraPhones('c-phones-list');const p={razao_social:document.getElementById('c-razao').value,cnpj:document.getElementById('c-cnpj').value,plan_id:document.getElementById('c-plan-id').value||null,status:document.getElementById('c-status').value,phone:document.getElementById('c-phone').value,phones:extraPhones,email:document.getElementById('c-email').value,address:document.getElementById('c-address').value,contact_name:document.getElementById('c-contact').value,tickets_limit:parseInt(document.getElementById('c-tickets-limit').value)||9999};if(!p.razao_social)return toast('Razao social obrigatoria','error');let err;if(id){({error:err}=await sb.from('clients').update(p).eq('id',id));}else{({error:err}=await sb.from('clients').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-client');toast(id?'Atualizado!':'Cadastrado!','success');}
 async function deleteClient(id){if(!confirm('Excluir cliente permanentemente?'))return;const{error}=await sb.from('clients').delete().eq('id',id);if(error)return toast('Erro: '+error.message,'error');toast('Excluido!','success');}
 function viewClientInventory(id){document.getElementById('filter-inv-client').value=id;showPage('inventario',document.querySelector('.sb-item[onclick*=inventario]'));}
 async function loadContracts(){const{data}=await sb.from('contracts').select('*,clients(razao_social,plans(name))').order('created_at',{ascending:false});const tb=document.getElementById('contracts-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-text">Nenhum contrato</div></div></td></tr>';return;}tb.innerHTML=data.map(c=>`<tr><td style="font-weight:500">${c.clients?.razao_social||'--'}</td><td>${c.clients?.plans?.name||'--'}</td><td style="font-weight:600">${fmtMoney(c.monthly_value)}</td><td>${c.loyalty_months}m</td><td style="font-size:12px">${fmtDate(c.start_date)}</td><td>${badgeStatus(c.status)}</td><td style="text-align:center">${c.signed?'OK':'--'}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openContractEdit(${JSON.stringify(c)})'>Editar</button><button class="btn btn-sm" onclick='openContractPDF(${JSON.stringify(c)})'>PDF</button><button class="btn btn-sm btn-danger" onclick="deleteContract('${c.id}')">X</button></div></td></tr>`).join('');}
@@ -2198,16 +2387,19 @@ function openContractModal(){populateClientSelect('ct-client');['ct-id','ct-valu
 function openContractEdit(c){populateClientSelect('ct-client',c.client_id);document.getElementById('ct-id').value=c.id;document.getElementById('ct-value').value=c.monthly_value;document.getElementById('ct-loyalty').value=c.loyalty_months;document.getElementById('ct-pcs').value=c.pcs_limit||'';document.getElementById('ct-visits').value=c.visits_per_month||1;document.getElementById('ct-start').value=c.start_date||'';document.getElementById('ct-end').value=c.end_date||'';document.getElementById('ct-notes').value=c.notes||'';document.getElementById('ct-signed').checked=c.signed||false;openModal('modal-contract');}
 async function saveContract(){const id=document.getElementById('ct-id').value;const p={client_id:document.getElementById('ct-client').value,monthly_value:parseFloat(document.getElementById('ct-value').value)||0,loyalty_months:parseInt(document.getElementById('ct-loyalty').value)||12,pcs_limit:parseInt(document.getElementById('ct-pcs').value)||null,visits_per_month:parseInt(document.getElementById('ct-visits').value)||1,start_date:document.getElementById('ct-start').value,end_date:document.getElementById('ct-end').value||null,notes:document.getElementById('ct-notes').value,signed:document.getElementById('ct-signed').checked};if(!p.client_id)return toast('Selecione o cliente','error');let err;if(id){({error:err}=await sb.from('contracts').update(p).eq('id',id));}else{({error:err}=await sb.from('contracts').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-contract');toast('Contrato salvo!','success');}
 async function deleteContract(id){if(!confirm('Excluir contrato?'))return;await sb.from('contracts').delete().eq('id',id);toast('Excluido!','success');}
-async function loadInventory(){const cf=document.getElementById('filter-inv-client')?.value;const s=document.getElementById('filter-inv-client');if(s){const cur=s.value;s.innerHTML='<option value="">Todos</option>'+allClients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.razao_social}</option>`).join('');}let q=sb.from('assets').select('*,clients(razao_social)').order('created_at',{ascending:false});if(cf)q=q.eq('client_id',cf);const{data}=await q.limit(200);const tb=document.getElementById('inventory-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-text">Nenhum equipamento</div></div></td></tr>';return;}tb.innerHTML=data.map(a=>`<tr><td style="font-size:12px">${a.clients?.razao_social||'--'}</td><td style="font-weight:500">${a.asset_name}</td><td>${a.asset_type}</td><td style="font-size:11px;font-family:monospace">${a.serial_number||'--'}</td><td style="font-size:11px;font-family:monospace">${a.ip_address||'--'}</td><td style="font-size:12px">${a.location||'--'}</td><td>${(a.image_urls||[]).length?`<span style="background:#E3F2FD;color:#0C447C;padding:2px 6px;border-radius:4px;font-size:11px">${a.image_urls.length} foto(s)</span>`:'--'}</td><td>${badgeStatus(a.status)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openInventoryEdit(${JSON.stringify(a)})'>Editar</button><button class="btn btn-sm btn-danger" onclick="deleteInventory('${a.id}')">X</button></div></td></tr>`).join('');}
-function openInventoryModal(){populateClientSelect('inv-client');['inv-id','inv-name','inv-serial','inv-ip','inv-location','inv-notes'].forEach(f=>document.getElementById(f).value='');document.getElementById('inv-type').value='Computador';document.getElementById('inv-status').value='ATIVO';document.getElementById('inv-img-data').value='[]';document.getElementById('inv-img-previews').innerHTML='';document.getElementById('inv-modal-title').textContent='Novo Equipamento';openModal('modal-inventory');}
-function openInventoryEdit(a){populateClientSelect('inv-client',a.client_id);document.getElementById('inv-id').value=a.id;document.getElementById('inv-name').value=a.asset_name;document.getElementById('inv-type').value=a.asset_type;document.getElementById('inv-serial').value=a.serial_number||'';document.getElementById('inv-ip').value=a.ip_address||'';document.getElementById('inv-location').value=a.location||'';document.getElementById('inv-status').value=a.status;document.getElementById('inv-notes').value=a.asset_notes||'';document.getElementById('inv-img-data').value=JSON.stringify(a.image_urls||[]);document.getElementById('inv-modal-title').textContent='Editar Equipamento';openModal('modal-inventory');}
-async function saveInventory(){const id=document.getElementById('inv-id').value;const p={client_id:document.getElementById('inv-client').value,asset_name:document.getElementById('inv-name').value,asset_type:document.getElementById('inv-type').value,serial_number:document.getElementById('inv-serial').value,ip_address:document.getElementById('inv-ip').value,location:document.getElementById('inv-location').value,status:document.getElementById('inv-status').value,asset_notes:document.getElementById('inv-notes').value,image_urls:JSON.parse(document.getElementById('inv-img-data').value||'[]')};if(!p.client_id||!p.asset_name)return toast('Cliente e nome obrigatorios','error');let err;if(id){({error:err}=await sb.from('assets').update(p).eq('id',id));}else{({error:err}=await sb.from('assets').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-inventory');toast('Salvo!','success');}
+async function loadInventory(){const cf=document.getElementById('filter-inv-client')?.value;const s=document.getElementById('filter-inv-client');if(s){const cur=s.value;s.innerHTML='<option value="">Todos</option>'+allClients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.razao_social}</option>`).join('');}let q=sb.from('assets').select('*,clients(razao_social)').order('created_at',{ascending:false});if(cf)q=q.eq('client_id',cf);const{data}=await q.limit(200);const tb=document.getElementById('inventory-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-text">Nenhum equipamento</div></div></td></tr>';return;}tb.innerHTML=data.map(a=>{const ra=a.remote_access||[];const raHtml=ra.length?ra.map(r=>`<span style="background:#E3F2FD;color:#0C447C;padding:1px 5px;border-radius:4px;font-size:10px;cursor:help" title="ID: ${r.id}${r.password?' | Senha: '+r.password:''}">${r.tool}</span>`).join(' '):'--';return`<tr><td style="font-size:12px">${a.clients?.razao_social||'--'}</td><td style="font-weight:500">${a.asset_name}</td><td>${a.asset_type}</td><td style="font-size:11px;font-family:monospace">${a.serial_number||'--'}</td><td style="font-size:11px;font-family:monospace">${a.ip_address||'--'}</td><td style="font-size:12px">${a.location||'--'}</td><td>${raHtml}</td><td>${(a.image_urls||[]).length?`<span style="background:#E3F2FD;color:#0C447C;padding:2px 6px;border-radius:4px;font-size:11px">${a.image_urls.length} foto(s)</span>`:'--'}</td><td>${badgeStatus(a.status)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openInventoryEdit(${JSON.stringify(a)})'>Editar</button><button class="btn btn-sm btn-danger" onclick="deleteInventory('${a.id}')">X</button></div></td></tr>`;}).join('');}
+function onInvTypeChange(sel){const noRemote=['Impressora','Roteador','NAS'];const sec=document.getElementById('inv-remote-section');if(sec)sec.style.display=noRemote.includes(sel.value)?'none':'block';}
+function addRemoteAccessRow(tool='',id_val='',pass_val=''){const list=document.getElementById('inv-remote-list');if(!list)return;const d=document.createElement('div');d.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap';d.innerHTML=`<select class="ra-tool" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px"><option value="AnyDesk"${tool==='AnyDesk'?' selected':''}>AnyDesk</option><option value="RustDesk"${tool==='RustDesk'?' selected':''}>RustDesk</option><option value="TeamViewer"${tool==='TeamViewer'?' selected':''}>TeamViewer</option></select><input type="text" class="ra-id" placeholder="ID" value="${id_val}" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px"><input type="text" class="ra-pass" placeholder="Senha" value="${pass_val}" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px"><button class="btn btn-sm btn-danger" onclick="this.closest('div').remove()" type="button">✕</button>`;list.appendChild(d);}
+function getRemoteAccess(){const rows=[];document.querySelectorAll('#inv-remote-list > div').forEach(d=>{const tool=d.querySelector('.ra-tool')?.value||'';const id_v=d.querySelector('.ra-id')?.value||'';const pass_v=d.querySelector('.ra-pass')?.value||'';if(tool&&id_v)rows.push({tool,id:id_v,password:pass_v});});return rows;}
+function openInventoryModal(){populateClientSelect('inv-client');['inv-id','inv-name','inv-serial','inv-ip','inv-location','inv-notes'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('inv-type').value='Computador';document.getElementById('inv-status').value='ATIVO';document.getElementById('inv-img-data').value='[]';document.getElementById('inv-img-previews').innerHTML='';document.getElementById('inv-remote-list').innerHTML='';document.getElementById('inv-remote-section').style.display='block';document.getElementById('inv-modal-title').textContent='Novo Equipamento';openModal('modal-inventory');}
+function openInventoryEdit(a){populateClientSelect('inv-client',a.client_id);document.getElementById('inv-id').value=a.id;document.getElementById('inv-name').value=a.asset_name;document.getElementById('inv-type').value=a.asset_type;document.getElementById('inv-serial').value=a.serial_number||'';document.getElementById('inv-ip').value=a.ip_address||'';document.getElementById('inv-location').value=a.location||'';document.getElementById('inv-status').value=a.status;document.getElementById('inv-notes').value=a.asset_notes||'';document.getElementById('inv-img-data').value=JSON.stringify(a.image_urls||[]);document.getElementById('inv-modal-title').textContent='Editar Equipamento';const noRemote=['Impressora','Roteador','NAS'];const sec=document.getElementById('inv-remote-section');if(sec)sec.style.display=noRemote.includes(a.asset_type)?'none':'block';const list=document.getElementById('inv-remote-list');if(list){list.innerHTML='';(a.remote_access||[]).forEach(r=>addRemoteAccessRow(r.tool,r.id,r.password));}openModal('modal-inventory');}
+async function saveInventory(){const id=document.getElementById('inv-id').value;const ra=getRemoteAccess();const p={client_id:document.getElementById('inv-client').value,asset_name:document.getElementById('inv-name').value,asset_type:document.getElementById('inv-type').value,serial_number:document.getElementById('inv-serial').value,ip_address:document.getElementById('inv-ip').value,location:document.getElementById('inv-location').value,status:document.getElementById('inv-status').value,asset_notes:document.getElementById('inv-notes').value,image_urls:JSON.parse(document.getElementById('inv-img-data').value||'[]'),remote_access:ra};if(!p.client_id||!p.asset_name)return toast('Cliente e nome obrigatorios','error');let err;if(id){({error:err}=await sb.from('assets').update(p).eq('id',id));}else{({error:err}=await sb.from('assets').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-inventory');toast('Salvo!','success');}
 async function deleteInventory(id){if(!confirm('Excluir equipamento?'))return;await sb.from('assets').delete().eq('id',id);toast('Excluido!','success');}
 function handleInvImages(e){const files=Array.from(e.target.files),cur=JSON.parse(document.getElementById('inv-img-data').value||'[]'),pv=document.getElementById('inv-img-previews');files.forEach(f=>{const r=new FileReader();r.onload=ev=>{const u=ev.target.result;cur.push(u);document.getElementById('inv-img-data').value=JSON.stringify(cur);const d=document.createElement('div');d.className='img-preview';d.innerHTML=`<img src="${u}"><button class="img-preview-remove" onclick="this.closest('.img-preview').remove()">x</button>`;pv.appendChild(d);};r.readAsDataURL(f);});}
 async function loadProspects(){const st=document.getElementById('filter-prospect-stage')?.value;let q=sb.from('prospects').select('*,user_profiles(name)').order('created_at',{ascending:false});if(st)q=q.eq('funnel_stage',st);const{data}=await q.limit(100);const stages=['LEAD','QUALIFICADO','PROPOSTA','NEGOCIACAO','FECHADO_GANHO','INATIVO'];const co={};stages.forEach(s=>co[s]=0);(data||[]).forEach(p=>co[p.funnel_stage]=(co[p.funnel_stage]||0)+1);document.getElementById('funnel-metrics').innerHTML=[['LEAD','#0C447C'],['QUALIFICADO','#3B6D11'],['PROPOSTA','#8B5E00']].map(([s,c])=>`<div class="metric" style="border-top:3px solid ${c}"><div class="metric-label">${s}</div><div class="metric-value" style="color:${c}">${co[s]}</div></div>`).join('');document.getElementById('funnel-visual').innerHTML=stages.map(s=>{const p=Math.round((co[s]/(data?.length||1))*100);return`<div class="funnel-stage"><span style="width:90px;font-size:11px;color:var(--sub)">${s}</span><div style="flex:1;background:#F1EFE8;border-radius:4px;height:8px"><div class="funnel-bar" style="width:${p}%"></div></div><span style="font-size:11px;font-weight:600;min-width:20px;text-align:right">${co[s]}</span></div>`;}).join('');const up=(data||[]).filter(p=>p.next_follow_up&&new Date(p.next_follow_up)>=new Date()).sort((a,b)=>new Date(a.next_follow_up)-new Date(b.next_follow_up));document.getElementById('followups-list').innerHTML=up.length?up.slice(0,5).map(p=>`<div style="padding:8px;border-bottom:1px solid #F1EFE8;font-size:12px"><strong>${p.company_name}</strong><br><span style="color:var(--sub)">${fmtDate(p.next_follow_up)}</span></div>`).join(''):'<div class="empty"><div class="empty-text">Nenhum</div></div>';const tb=document.getElementById('prospects-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-text">Nenhum lead</div></div></td></tr>';return;}tb.innerHTML=data.map(p=>`<tr><td style="font-weight:500">${p.company_name}</td><td>${p.contact_name||'--'}</td><td>${p.phone||'--'}</td><td>${badgeStatus(p.funnel_stage)}</td><td>${p.user_profiles?.name||'--'}</td><td>${fmtDate(p.next_follow_up)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm btn-primary" onclick='openProspectEdit(${JSON.stringify(p)})'>E</button>${p.funnel_stage!=='FECHADO_GANHO'?`<button class="btn btn-sm btn-success" onclick="convertToClient('${p.id}','${p.company_name}')">Conv</button>`:''}<button class="btn btn-sm btn-danger" onclick="deleteProspect('${p.id}')">X</button></div></td></tr>`).join('');}
-function openProspectModal(){populateUserSelect('p-assigned');['p-id','p-company','p-contact','p-phone','p-email','p-notes','p-followup'].forEach(f=>document.getElementById(f).value='');document.getElementById('p-stage').value='LEAD';document.getElementById('prospect-modal-title').textContent='Novo Lead';openModal('modal-prospect');}
-function openProspectEdit(p){populateUserSelect('p-assigned',p.assigned_to);document.getElementById('p-id').value=p.id;document.getElementById('p-company').value=p.company_name;document.getElementById('p-contact').value=p.contact_name||'';document.getElementById('p-phone').value=p.phone||'';document.getElementById('p-email').value=p.email||'';document.getElementById('p-notes').value=p.notes||'';document.getElementById('p-stage').value=p.funnel_stage;document.getElementById('p-followup').value=p.next_follow_up||'';document.getElementById('prospect-modal-title').textContent='Editar Lead';openModal('modal-prospect');}
-async function saveProspect(){const id=document.getElementById('p-id').value;const p={company_name:document.getElementById('p-company').value,contact_name:document.getElementById('p-contact').value,phone:document.getElementById('p-phone').value,email:document.getElementById('p-email').value,funnel_stage:document.getElementById('p-stage').value,notes:document.getElementById('p-notes').value,next_follow_up:document.getElementById('p-followup').value||null,assigned_to:document.getElementById('p-assigned').value||null};if(!p.company_name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('prospects').update(p).eq('id',id));}else{({error:err}=await sb.from('prospects').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-prospect');toast(id?'Atualizado!':'Cadastrado!','success');}
+function openProspectModal(){populateUserSelect('p-assigned');['p-id','p-company','p-contact','p-phone','p-email','p-notes','p-followup'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});document.getElementById('p-stage').value='LEAD';document.getElementById('prospect-modal-title').textContent='Novo Lead';resetPhoneList('p-phones-list','p-phone');openModal('modal-prospect');}
+function openProspectEdit(p){populateUserSelect('p-assigned',p.assigned_to);document.getElementById('p-id').value=p.id;document.getElementById('p-company').value=p.company_name;document.getElementById('p-contact').value=p.contact_name||'';document.getElementById('p-phone').value=p.phone||'';document.getElementById('p-email').value=p.email||'';document.getElementById('p-notes').value=p.notes||'';document.getElementById('p-stage').value=p.funnel_stage;document.getElementById('p-followup').value=p.next_follow_up||'';document.getElementById('prospect-modal-title').textContent='Editar Lead';resetPhoneList('p-phones-list','p-phone',p.phones||[]);openModal('modal-prospect');}
+async function saveProspect(){const id=document.getElementById('p-id').value;const extraPhones=getExtraPhones('p-phones-list');const p={company_name:document.getElementById('p-company').value,contact_name:document.getElementById('p-contact').value,phone:document.getElementById('p-phone').value,phones:extraPhones,email:document.getElementById('p-email').value,funnel_stage:document.getElementById('p-stage').value,notes:document.getElementById('p-notes').value,next_follow_up:document.getElementById('p-followup').value||null,assigned_to:document.getElementById('p-assigned').value||null};if(!p.company_name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('prospects').update(p).eq('id',id));}else{({error:err}=await sb.from('prospects').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-prospect');toast(id?'Atualizado!':'Cadastrado!','success');}
 async function deleteProspect(id){if(!confirm('Excluir lead?'))return;await sb.from('prospects').delete().eq('id',id);toast('Excluido!','success');}
 async function convertToClient(id,name){if(!confirm(`Converter "${name}" em cliente?`))return;await sb.from('prospects').update({funnel_stage:'FECHADO_GANHO'}).eq('id',id);openClientModal();document.getElementById('c-razao').value=name;}
 async function loadBillings(){const st=document.getElementById('filter-billing-status')?.value,ci=document.getElementById('filter-billing-client')?.value,mo=document.getElementById('fin-month-filter')?.value;const cs=document.getElementById('filter-billing-client');if(cs){const cur=cs.value;cs.innerHTML='<option value="">Todos</option>'+allClients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.razao_social}</option>`).join('');}let q=sb.from('billings').select('*,clients(razao_social)').order('due_date',{ascending:false});if(st)q=q.eq('status',st);if(ci)q=q.eq('client_id',ci);if(mo)q=q.gte('reference_month',mo+'-01').lte('reference_month',mo+'-31');const{data}=await q.limit(300);let tot=0,pen=0,atr=0;(data||[]).forEach(b=>{const t=Number(b.monthly_fee||0)+Number(b.extra_fee||0)+Number(b.one_time_fee||0);tot+=t;if(b.status==='PENDENTE')pen+=t;if(b.status==='ATRASADO')atr+=t;});document.getElementById('fin-total').textContent=fmtMoney(tot);document.getElementById('fin-pendente').textContent=fmtMoney(pen);document.getElementById('fin-atrasado').textContent=fmtMoney(atr);const tb=document.getElementById('billings-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><div class="empty-text">Nenhum lancamento</div></div></td></tr>';return;}tb.innerHTML=data.map(b=>{const t=Number(b.monthly_fee||0)+Number(b.extra_fee||0)+Number(b.one_time_fee||0);const isAuto=b.origin==='AUTO';const isPendAprov=b.status==='PENDENTE_APROVACAO';const isInativo=b.status==='INATIVO';return`<tr style="${isInativo?'opacity:0.5':''}""><td style="font-weight:500">${b.clients?.razao_social||'--'}</td><td>${fmtMoney(b.monthly_fee)}</td><td>${Number(b.extra_fee||0)>0?`<span style="color:#A32D2D">+${fmtMoney(b.extra_fee)}</span>`:'--'}</td><td>${Number(b.one_time_fee||0)>0?fmtMoney(b.one_time_fee):'--'}</td><td style="font-weight:600">${fmtMoney(t)}</td><td style="font-size:12px">${fmtDate(b.due_date)}</td><td style="font-size:12px">${fmtMonth(b.reference_month)}</td><td style="font-size:11px">${isAuto?'<span class="badge" style="background:#E3F2FD;color:#0C447C">Auto</span>':'<span class="badge badge-inativo">Manual</span>'}</td><td>${badgeStatus(b.status)}</td><td style="font-size:11px">${b.nfse_number?`<span style="color:#3B6D11">NF:${b.nfse_number}</span>`:'--'}</td><td><div style="display:flex;gap:3px;flex-wrap:wrap">${isPendAprov?`<button class="btn btn-sm btn-success" onclick="withSave(this,()=>approveBilling('${b.id}'))" title="Aceitar cobrança">✓ Aceitar</button><button class="btn btn-sm btn-danger" onclick="withSave(this,()=>rejectBilling('${b.id}'))" title="Rejeitar cobrança">✗ Rejeitar</button>`:''}${!isPendAprov&&b.status!=='PAGO'&&!isInativo?`<button class="btn btn-sm btn-success" onclick="withSave(this,()=>markAsPaid('${b.id}'))">Pago</button>`:''}<button class="btn btn-sm" onclick='openBillingEdit(${JSON.stringify(b)})'>E</button><button class="btn btn-sm" onclick="openNfseForBilling('${b.id}','${b.client_id}','${b.reference_month?.slice(0,7)||''}',${t})">NF</button>${isInativo?`<button class="btn btn-sm btn-primary" onclick="withSave(this,()=>reactivateBilling('${b.id}'))">Reativar</button>`:''}<button class="btn btn-sm btn-danger" onclick="deleteBilling('${b.id}')">X</button></div></td></tr>`;}).join('');}
