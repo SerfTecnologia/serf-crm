@@ -1196,14 +1196,33 @@ tr:hover td{background:#FAFAF7}
 
 <!-- USER MODAL -->
 <div class="modal-overlay" id="modal-user">
-  <div class="modal">
+  <div class="modal modal-lg">
     <div class="modal-header"><div class="modal-title" id="user-modal-title">Novo Usuário</div><button class="modal-close" onclick="closeModal('modal-user')">×</button></div>
-    <div class="form-group"><label>Nome *</label><input type="text" id="u-name"></div>
-    <div class="form-group"><label>E-mail *</label><input type="email" id="u-email"></div>
-    <div class="form-group"><label>Perfil</label><select id="u-role"><option value="ADMIN">Admin</option><option value="TECNICO">Técnico</option><option value="FINANCEIRO">Financeiro</option><option value="COMERCIAL">Comercial</option></select></div>
-    <div id="u-create-info" class="alert alert-info" style="font-size:12px">Senha inicial: <strong>10203040</strong>. Usuário deve alterar no primeiro acesso.</div>
+    <div class="grid2">
+      <div class="form-group"><label>Nome *</label><input type="text" id="u-name" placeholder="Nome completo"></div>
+      <div class="form-group"><label>E-mail *</label><input type="email" id="u-email" placeholder="email@empresa.com"></div>
+    </div>
+    <!-- Multi-profile with permissions -->
+    <div class="form-group">
+      <label>Perfis de acesso</label>
+      <div id="u-roles-list" style="background:#F7F5EE;border-radius:8px;padding:10px;border:1px solid var(--border)">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+    <!-- Password section -->
+    <div style="background:#F7F5EE;border-radius:8px;padding:12px;border:1px solid var(--border);margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Senha</div>
+      <div id="u-create-info" style="font-size:12px;color:var(--sub);margin-bottom:8px">Senha padrão: <strong>10203040</strong> — ou defina uma personalizada abaixo.</div>
+      <input type="password" id="u-password" placeholder="Deixe vazio para senha padrão (10203040)" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none">
+      <div id="u-reset-section" style="display:none;margin-top:8px">
+        <button class="btn btn-sm" onclick="withSave(this,()=>resetUserPassword())" type="button">🔑 Redefinir senha deste usuário</button>
+      </div>
+    </div>
     <input type="hidden" id="u-id">
-    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" id="u-save-btn" onclick="withSave(this,()=>saveUser())">Criar</button></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-user')">Cancelar</button>
+      <button class="btn btn-primary" id="u-save-btn" onclick="withSave(this,()=>saveUser())">Criar</button>
+    </div>
   </div>
 </div>
 
@@ -1320,23 +1339,23 @@ tr:hover td{background:#FAFAF7}
 <!-- SCHEDULE CONFIG MODAL -->
 <div class="modal-overlay" id="modal-schedule-edit">
   <div class="modal modal-lg">
-    <div class="modal-header"><div class="modal-title">Configurar Ciclo 12x36</div><button class="modal-close" onclick="closeModal('modal-schedule-edit')">x</button></div>
+    <div class="modal-header"><div class="modal-title">Configurar Alternância de Turnos</div><button class="modal-close" onclick="closeModal('modal-schedule-edit')">x</button></div>
     <div class="alert alert-info" style="font-size:12px;margin-bottom:14px">
-      O ciclo e continuo — nao reinicia no inicio do mes. Defina uma data de referencia e qual equipe estava ON naquele dia. O sistema calcula automaticamente todos os outros dias.
+      Define quem faz o turno da manhã (09h–13h) em uma data específica. A partir daí o sistema alterna automaticamente todos os dias úteis.
     </div>
     <div class="grid2">
-      <div class="form-group"><label>Data de referencia</label><input type="date" id="sched-ref-date"></div>
-      <div class="form-group"><label>Equipe ON nessa data</label>
+      <div class="form-group"><label>Data de referência</label><input type="date" id="sched-ref-date"></div>
+      <div class="form-group"><label>Quem faz manhã nessa data?</label>
         <select id="sched-ref-team">
-          <option value="Ruan">Ruan (manha)</option>
-          <option value="Wilson">Wilson (manha)</option>
+          <option value="Ruan">Ruan (09h–13h)</option>
+          <option value="Wilson">Wilson (09h–13h)</option>
         </select>
       </div>
     </div>
     <div style="background:#F7F5EE;border-radius:8px;padding:12px;font-size:12px;color:var(--sub);margin-bottom:10px">
-      <strong>Logica dos turnos:</strong><br>
-      Alternancia continua de turnos: um faz 8h-13h, outro 13h-18h (rodizio diario automatico)<br>
-      Todos os dias uteis: cobertura total 8h-18h por Ruan e Wilson
+      <strong>Lógica:</strong> Seg–Sex, ambos trabalham na SERF todo dia.<br>
+      Um faz 09h–13h, o outro 13h–18h. Turno de manhã alterna diariamente.<br>
+      Fins de semana: folga para ambos.
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-schedule-edit')">Cancelar</button>
@@ -1535,7 +1554,7 @@ async function doLogout(){await sb.auth.signOut();showAuth();}
 function showAuth(){document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';currentUser=null;currentUserProfile=null;}
 async function changePassword(){const np=document.getElementById('new-password').value,cp=document.getElementById('confirm-password').value;if(np.length<8)return toast('Min 8 caracteres','error');if(np!==cp)return toast('Senhas nao coincidem','error');const{error}=await sb.auth.updateUser({password:np});if(error)return toast('Erro','error');closeModal('modal-change-pwd');toast('Senha alterada!','success');}
 const pageConfig={'dashboard':['Dashboard','Visao geral',[]],'chamados':['Chamados','Chamados',[{label:'+ Novo chamado',fn:'openTicketModal()'}]],'agenda':['Agenda','Calendario',[{label:'+ Nova atividade',fn:'openAgendaModal()'}]],'ordens':['Ordens de Servico','OS',[{label:'+ Nova OS',fn:"openWOModal()"}]],'escala':['Escala','Equipe',[]],'clientes':['Clientes','Clientes',[{label:'+ Novo cliente',fn:'openClientModal()'}]],'contratos':['Contratos','Contratos',[{label:'+ Novo contrato',fn:'openContractModal()'}]],'planos':['Planos','Planos',[{label:'+ Novo plano',fn:'openPlanModal()',admin:true}]],'servicos-avulsos':['Servicos Avulsos','Catalogo',[{label:'+ Novo servico',fn:'openServiceModal()',admin:true}]],'inventario':['Inventario TI','Equipamentos',[{label:'+ Equipamento',fn:'openInventoryModal()'}]],'prospeccao':['Prospeccao','Funil',[{label:'+ Novo lead',fn:'openProspectModal()'}]],'financeiro':['Financeiro','Financeiro',[{label:'+ Lancamento',fn:'openBillingModal()'}]],'relatorios':['Relatorios','Relatorios',[]],'nfse':['NFS-e','Notas',[]],'social-dashboard':['Redes Sociais','Painel',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-instagram':['Instagram','Instagram',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-linkedin':['LinkedIn','LinkedIn',[{label:'+ Post',fn:"openSocialPostModal('LINKEDIN')"}]],'social-facebook':['Facebook','Facebook',[{label:'+ Post',fn:"openSocialPostModal('FACEBOOK')"}]],'usuarios':['Usuarios','Usuarios',[{label:'+ Novo usuario',fn:'openUserModal()',admin:true}]],'cofre':['Cofre','Cofre',[{label:'+ Credencial',fn:'openVaultModal()',admin:true}]]};
-function showPage(id,el){_currentPage=id;addReloadBtn();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));const page=document.getElementById('page-'+id);if(page)page.classList.add('active');if(el)el.classList.add('active');const cfg=pageConfig[id]||[id,'',''];document.getElementById('page-title').textContent=cfg[0];document.getElementById('page-sub').textContent=cfg[1];const actions=document.getElementById('topbar-actions');actions.querySelectorAll('.btn').forEach(b=>b.remove());(cfg[2]||[]).forEach(a=>{if(a.admin&&currentUserProfile?.role!=='ADMIN')return;const btn=document.createElement('button');btn.className='btn btn-primary';btn.textContent=a.label;btn.onclick=()=>eval(a.fn);actions.appendChild(btn);});const loaders={'dashboard':loadDashboard,'chamados':loadTickets,'agenda':()=>{renderAgendaCalendar();loadAgendaEvents();},'ordens':loadWorkOrders,'escala':loadScheduleData,'clientes':loadClients,'contratos':loadContracts,'planos':loadPlans,'servicos-avulsos':loadServicesCatalog,'inventario':loadInventory,'prospeccao':loadProspects,'financeiro':loadBillings,'relatorios':initReports,'nfse':loadNfse,'social-dashboard':loadSocialDashboard,'social-instagram':()=>loadSocialPosts('INSTAGRAM'),'social-linkedin':()=>loadSocialPosts('LINKEDIN'),'social-facebook':()=>loadSocialPosts('FACEBOOK'),'usuarios':loadUsers,'cofre':loadVault};if(loaders[id])loaders[id]();if(id==='agenda'){const nb=document.getElementById('agenda-notif-persistent');if(nb)nb.remove();}}
+function showPage(id,el){_currentPage=id;addReloadBtn();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));const page=document.getElementById('page-'+id);if(page)page.classList.add('active');if(el)el.classList.add('active');const cfg=pageConfig[id]||[id,'',''];document.getElementById('page-title').textContent=cfg[0];document.getElementById('page-sub').textContent=cfg[1];const actions=document.getElementById('topbar-actions');actions.querySelectorAll('.btn').forEach(b=>b.remove());(cfg[2]||[]).forEach(a=>{if(a.admin&&currentUserProfile?.role!=='ADMIN')return;const btn=document.createElement('button');btn.className='btn btn-primary';btn.textContent=a.label;btn.onclick=()=>eval(a.fn);actions.appendChild(btn);});const loaders={'dashboard':loadDashboard,'chamados':loadTickets,'agenda':()=>{loadAgendaTypes().then(()=>{renderAgendaCalendar();loadAgendaEvents();});},'ordens':loadWorkOrders,'escala':loadScheduleData,'clientes':loadClients,'contratos':loadContracts,'planos':loadPlans,'servicos-avulsos':loadServicesCatalog,'inventario':loadInventory,'prospeccao':loadProspects,'financeiro':loadBillings,'relatorios':initReports,'nfse':loadNfse,'social-dashboard':loadSocialDashboard,'social-instagram':()=>loadSocialPosts('INSTAGRAM'),'social-linkedin':()=>loadSocialPosts('LINKEDIN'),'social-facebook':()=>loadSocialPosts('FACEBOOK'),'usuarios':loadUsers,'cofre':loadVault};if(loaders[id])loaders[id]();if(id==='agenda'){const nb=document.getElementById('agenda-notif-persistent');if(nb)nb.remove();}}
 function toggleGroup(id,el){const c=document.getElementById(id);if(!c)return;const o=c.classList.contains('open');c.classList.toggle('open',!o);if(el)el.classList.toggle('open',!o);}
 function fmtMoney(v){return'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtDate(d){if(!d)return'--';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return d;}}
@@ -2059,25 +2078,31 @@ function getRWAlternation_DEPRECATED(dateStr) {
 }
 
 function buildDefaultShiftsForDate(dateStr) {
-  const dow = new Date(dateStr+'T12:00:00').getDay();
-  if(dow===0||dow===6) return []; // weekend — both off
-  // Count weekdays from reference to determine alternation
-  const ref  = new Date(schedRef.date+'T12:00:00');
-  const curr = new Date(dateStr+'T12:00:00');
+  const dt = new Date(dateStr+'T12:00:00');
+  const dow = dt.getDay();
+  if(dow===0||dow===6) return []; // fim de semana — folga
+
+  // Conta dias úteis desde a data de referência para determinar a alternância
+  const ref = new Date(schedRef.date+'T12:00:00');
   let wdCount = 0;
-  const step  = curr >= ref ? 1 : -1;
-  let d = new Date(ref);
-  while((step===1 && d < curr)||(step===-1 && d > curr)){
-    const wd = d.getDay();
-    if(wd!==0&&wd!==6) wdCount += step;
-    d.setDate(d.getDate()+step);
+  const fwd = dt >= ref;
+  const step = fwd ? 1 : -1;
+  let cursor = new Date(ref);
+  while(fwd ? cursor < dt : cursor > dt){
+    const d = cursor.getDay();
+    if(d!==0&&d!==6) wdCount += step;
+    cursor.setDate(cursor.getDate()+step);
   }
-  // Em dias pares: Wilson manhã (09-13), Ruan tarde (13-18)
-  // Em dias ímpares: Ruan manhã (09-13), Wilson tarde (13-18)
-  const wilsonMorning = (wdCount % 2 === 0);
+  // schedRef.team: quem faz manhã na data de referência
+  // 'Ruan' => Ruan manhã nos pares, Wilson manhã nos ímpares
+  // 'Wilson' => Wilson manhã nos pares, Ruan manhã nos ímpares
+  const refMorning = schedRef.team||'Ruan';
+  const refOther   = refMorning==='Ruan'?'Wilson':'Ruan';
+  const evenMorning  = (wdCount%2===0) ? refMorning : refOther;
+  const evenAfternoon= evenMorning===refMorning ? refOther : refMorning;
   return [
-    {member: wilsonMorning ? 'Wilson' : 'Ruan',   start:'09:00', end:'13:00', type:'serf'},
-    {member: wilsonMorning ? 'Ruan'   : 'Wilson', start:'13:00', end:'18:00', type:'serf'}
+    {member:evenMorning,   start:'09:00', end:'13:00', type:'serf'},
+    {member:evenAfternoon, start:'13:00', end:'18:00', type:'serf'}
   ];
 }
 
@@ -2484,10 +2509,126 @@ function openSocialPostEdit(p){document.getElementById('sp-id').value=p.id;docum
 function handleSocialMedia(e){const file=e.target.files[0];if(!file)return;if(file.size>50*1024*1024)return toast('Arquivo muito grande (max 50MB)','error');const r=new FileReader();r.onload=ev=>{const d=ev.target.result;document.getElementById('sp-media-data').value=d;document.getElementById('sp-media-preview').innerHTML=file.type.startsWith('video/')?`<video src="${d}" controls style="max-width:100%;max-height:100px;border-radius:6px"></video>`:`<img src="${d}" style="max-width:100%;max-height:100px;border-radius:6px">`;};r.readAsDataURL(file);}
 async function saveSocialPost(){const id=document.getElementById('sp-id').value;const md=document.getElementById('sp-media-data').value;const payload={platform:document.getElementById('sp-platform').value,post_type:document.getElementById('sp-type').value,title:document.getElementById('sp-title').value,description:document.getElementById('sp-desc').value,status:document.getElementById('sp-status').value,scheduled_date:document.getElementById('sp-date').value||null,media_url:md||null,media_type:md?(md.startsWith('data:video/')?'VIDEO':'IMAGE'):null,created_by:currentUserProfile?.id};if(!payload.title)return toast('Titulo obrigatorio','error');let err;if(id){({error:err}=await sb.from('social_posts').update(payload).eq('id',id));}else{({error:err}=await sb.from('social_posts').insert(payload));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-social-post');toast('Post salvo!','success');}
 async function deleteSocialPost(id){if(!confirm('Excluir post?'))return;await sb.from('social_posts').delete().eq('id',id);toast('Excluido!','success');}
-async function loadUsers(){const{data}=await sb.from('user_profiles').select('*').order('name');const tb=document.getElementById('users-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-text">Nenhum usuario</div></div></td></tr>';return;}tb.innerHTML=data.map(u=>`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${fmtInitials(u.name)}</div>${u.name}</div></td><td>${u.email}</td><td>${badgeStatus(u.role)}</td><td style="font-size:12px">${fmtDate(u.created_at)}</td><td><div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick='openUserEdit(${JSON.stringify(u)})'>Editar</button>${u.id!==currentUserProfile?.id?`<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">X</button>`:''}</div></td></tr>`).join('');}
-function openUserModal(){['u-id','u-name','u-email'].forEach(f=>document.getElementById(f).value='');document.getElementById('u-role').value='TECNICO';document.getElementById('u-create-info').style.display='block';document.getElementById('u-save-btn').textContent='Criar';document.getElementById('user-modal-title').textContent='Novo Usuario';openModal('modal-user');}
-function openUserEdit(u){document.getElementById('u-id').value=u.id;document.getElementById('u-name').value=u.name;document.getElementById('u-email').value=u.email;document.getElementById('u-role').value=u.role;document.getElementById('u-create-info').style.display='none';document.getElementById('u-save-btn').textContent='Salvar';document.getElementById('user-modal-title').textContent='Editar Usuario';openModal('modal-user');}
-async function saveUser(){const id=document.getElementById('u-id').value,name=document.getElementById('u-name').value,email=document.getElementById('u-email').value,role=document.getElementById('u-role').value;if(!name||!email)return toast('Nome e email obrigatorios','error');let err;if(id){({error:err}=await sb.from('user_profiles').update({name,role}).eq('id',id));}else{({error:err}=await sb.from('user_profiles').insert({name,email,role}));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-user');toast(id?'Atualizado!':'Criado!','success');}
+async function loadUsers(){const{data}=await sb.from('user_profiles').select('*').order('name');const tb=document.getElementById('users-table-body');if(!data?.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-text">Nenhum usuario</div></div></td></tr>';return;}tb.innerHTML=data.map(u=>{const roles=(u.roles&&u.roles.length)?u.roles.join(', '):u.role||'--';return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${fmtInitials(u.name)}</div>${u.name}</div></td><td>${u.email}</td><td style="font-size:12px">${roles}</td><td style="font-size:12px">${fmtDate(u.created_at)}</td><td><div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick='openUserEdit(${JSON.stringify(u)})'>Editar</button>${u.id!==currentUserProfile?.id?`<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">X</button>`:''}</div></td></tr>`;}).join('');}
+
+const USER_ROLES_CONFIG = [
+  {key:'ADMIN',      label:'Admin',      desc:'Acesso total ao sistema'},
+  {key:'TECNICO',    label:'Técnico',    desc:'Chamados, OS, Agenda, Inventário'},
+  {key:'FINANCEIRO', label:'Financeiro', desc:'Financeiro, NFS-e, Relatórios'},
+  {key:'COMERCIAL',  label:'Comercial',  desc:'Prospecção, Clientes, Contratos'},
+];
+
+function renderUserRolesList(selectedRoles=[], permissions={}){
+  const el=document.getElementById('u-roles-list');
+  if(!el)return;
+  el.innerHTML=USER_ROLES_CONFIG.map(r=>{
+    const checked=selectedRoles.includes(r.key);
+    const perm=permissions[r.key]||'edit';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;min-width:140px">
+        <input type="checkbox" class="u-role-cb" value="${r.key}" ${checked?'checked':''} onchange="onRoleCbChange(this)">
+        <span style="font-weight:600;font-size:13px">${r.label}</span>
+        <span style="font-size:11px;color:var(--sub)">${r.desc}</span>
+      </label>
+      <div id="u-perm-${r.key}" style="display:${checked?'flex':'none'};gap:4px">
+        <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer">
+          <input type="radio" name="perm-${r.key}" value="view" ${perm==='view'?'checked':''}> Visualização
+        </label>
+        <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;margin-left:8px">
+          <input type="radio" name="perm-${r.key}" value="edit" ${perm==='edit'?'checked':''}> Edição
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onRoleCbChange(cb){
+  const key=cb.value;
+  const permDiv=document.getElementById('u-perm-'+key);
+  if(permDiv)permDiv.style.display=cb.checked?'flex':'none';
+}
+
+function getUserRolesAndPerms(){
+  const roles=[];const perms={};
+  document.querySelectorAll('.u-role-cb').forEach(cb=>{
+    if(cb.checked){
+      roles.push(cb.value);
+      const sel=document.querySelector(`input[name="perm-${cb.value}"]:checked`);
+      perms[cb.value]=sel?sel.value:'edit';
+    }
+  });
+  return{roles,perms};
+}
+
+function openUserModal(){
+  ['u-id','u-name','u-email','u-password'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  renderUserRolesList(['TECNICO'],{TECNICO:'edit'});
+  document.getElementById('u-create-info').style.display='block';
+  document.getElementById('u-reset-section').style.display='none';
+  document.getElementById('u-save-btn').textContent='Criar';
+  document.getElementById('user-modal-title').textContent='Novo Usuário';
+  openModal('modal-user');
+}
+
+function openUserEdit(u){
+  document.getElementById('u-id').value=u.id;
+  document.getElementById('u-name').value=u.name;
+  document.getElementById('u-email').value=u.email;
+  document.getElementById('u-password').value='';
+  const roles=u.roles&&u.roles.length?u.roles:[u.role||'TECNICO'];
+  const perms=u.permissions||{};
+  // Default edit permission for existing roles
+  roles.forEach(r=>{if(!perms[r])perms[r]='edit';});
+  renderUserRolesList(roles,perms);
+  document.getElementById('u-create-info').style.display='none';
+  document.getElementById('u-reset-section').style.display='block';
+  document.getElementById('u-save-btn').textContent='Salvar';
+  document.getElementById('user-modal-title').textContent='Editar Usuário';
+  openModal('modal-user');
+}
+
+async function saveUser(){
+  const profileId=document.getElementById('u-id').value; // user_profiles.id
+  const name=document.getElementById('u-name').value.trim();
+  const email=document.getElementById('u-email').value.trim();
+  const password=document.getElementById('u-password').value||'10203040';
+  if(!name||!email)return toast('Nome e e-mail obrigatórios','error');
+  const{roles,perms}=getUserRolesAndPerms();
+  if(!roles.length)return toast('Selecione ao menos um perfil','error');
+  const primaryRole=roles[0];
+
+  if(profileId){
+    const{error}=await sb.rpc('update_crm_user_email',{
+      p_user_id:profileId, p_new_email:email, p_name:name,
+      p_role:primaryRole, p_roles:roles, p_permissions:perms
+    });
+    if(error)return toast('Erro ao atualizar: '+error.message,'error');
+    if(document.getElementById('u-password').value){
+      const{error:pe}=await sb.rpc('reset_crm_user_password',{p_user_id:profileId,p_password:password});
+      if(pe)toast('Senha não atualizada: '+pe.message,'error');
+    }
+    toast('Usuário atualizado!','success');
+  } else {
+    const{error}=await sb.rpc('create_crm_user',{
+      p_email:email, p_name:name, p_role:primaryRole,
+      p_roles:roles, p_permissions:perms, p_password:password
+    });
+    if(error)return toast('Erro ao criar: '+error.message,'error');
+    toast('Usuário criado! Login: '+email+' | Senha: '+password,'success');
+  }
+  closeModal('modal-user');
+  loadUsers();
+  loadAllUsers();
+}
+
+async function resetUserPassword(){
+  const id=document.getElementById('u-id').value;
+  const pw=document.getElementById('u-password').value||'10203040';
+  if(!id)return;
+  const{error}=await sb.rpc('reset_crm_user_password',{p_user_id:id,p_password:pw});
+  if(error)return toast('Erro: '+error.message,'error');
+  toast('Senha redefinida: '+pw,'success');
+}
 async function deleteUser(id){if(!confirm('Excluir usuario?'))return;const{error}=await sb.from('user_profiles').delete().eq('id',id);if(error)return toast('Erro: '+error.message,'error');toast('Excluido!','success');}
 async function loadVault(){if(currentUserProfile?.role!=='ADMIN'){document.getElementById('vault-list').innerHTML='<div class="alert alert-danger">Acesso negado. Somente administradores.</div>';return;}const{data}=await sb.from('password_vault').select('*').order('service_name');renderVaultList(data||[]);}
 function filterVault(cat){sb.from('password_vault').select('*').order('service_name').then(({data})=>{renderVaultList(cat?(data||[]).filter(v=>v.category===cat):(data||[]));});}
