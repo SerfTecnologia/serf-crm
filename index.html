@@ -1591,7 +1591,7 @@ function populateUserSelect(id,val=''){const el=document.getElementById(id);if(!
 function populatePlanSelect(id,val=''){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Sem plano</option>'+allPlans.map(p=>`<option value="${p.id}"${p.id===val?' selected':''}>${p.name}</option>`).join('');}
 async function loadAllClients(){const{data}=await sb.from('clients').select('id,razao_social,status,plan_id,cnpj,phone,email,address,contact_name,tickets_limit,phones').order('razao_social');allClients=data||[];}
 async function loadAllUsers(){const{data}=await sb.from('user_profiles').select('id,auth_id,name,email,role,roles,permissions').order('name');allUsers=data||[];}
-async function loadAllPlans(){const{data}=await sb.from('plans').select('id,name,monthly_price,ticket_limit').order('monthly_price');allPlans=data||[];}
+async function loadAllPlans(){const{data,error}=await sb.from('plans').select('id,name,monthly_price,max_pcs,tickets_limit,description,features,active').order('monthly_price');if(error)console.warn('loadAllPlans error:',error.message);allPlans=data||[];}
 async function loadAllServices(){const{data}=await sb.from('services').select('id,name,unit_price,cnae_code').eq('active',true).order('name');allServices=data||[];}
 async function loadDashboard(){
   // Use lightweight count + aggregate queries instead of fetching all rows
