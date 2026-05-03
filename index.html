@@ -1572,7 +1572,7 @@ async function loginSuccess(user){
 async function doLogout(){await sb.auth.signOut();showAuth();}
 function showAuth(){document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';currentUser=null;currentUserProfile=null;}
 async function changePassword(){const np=document.getElementById('new-password').value,cp=document.getElementById('confirm-password').value;if(np.length<8)return toast('Min 8 caracteres','error');if(np!==cp)return toast('Senhas nao coincidem','error');const{error}=await sb.auth.updateUser({password:np});if(error)return toast('Erro','error');closeModal('modal-change-pwd');toast('Senha alterada!','success');}
-const pageConfig={'dashboard':['Dashboard','Visao geral',[]],'chamados':['Chamados','Chamados',[{label:'+ Novo chamado',fn:'openTicketModal()'}]],'agenda':['Agenda','Calendario',[{label:'+ Nova atividade',fn:'openAgendaModal()'}]],'ordens':['Ordens de Servico','OS',[{label:'+ Nova OS',fn:"openWOModal()"}]],'escala':['Escala','Equipe',[]],'clientes':['Clientes','Clientes',[{label:'+ Novo cliente',fn:'openClientModal()'}]],'contratos':['Contratos','Contratos',[{label:'+ Novo contrato',fn:'openContractModal()'}]],'planos':['Planos','Planos',[{label:'+ Novo plano',fn:'openPlanModal()',admin:true}]],'servicos-avulsos':['Servicos Avulsos','Catalogo',[{label:'+ Novo servico',fn:'openServiceModal()',admin:true}]],'inventario':['Inventario TI','Equipamentos',[{label:'+ Equipamento',fn:'openInventoryModal()'}]],'prospeccao':['Prospeccao','Funil',[{label:'+ Novo lead',fn:'openProspectModal()'}]],'financeiro':['Financeiro','Financeiro',[{label:'+ Lancamento',fn:'openBillingModal()'}]],'relatorios':['Relatorios','Relatorios',[]],'nfse':['NFS-e','Notas',[]],'social-dashboard':['Redes Sociais','Painel',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-instagram':['Instagram','Instagram',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-linkedin':['LinkedIn','LinkedIn',[{label:'+ Post',fn:"openSocialPostModal('LINKEDIN')"}]],'social-facebook':['Facebook','Facebook',[{label:'+ Post',fn:"openSocialPostModal('FACEBOOK')"}]],'usuarios':['Usuarios','Usuarios',[{label:'+ Novo usuario',fn:'openUserModal()',admin:true}]],'cofre':['Cofre','Cofre',[{label:'+ Credencial',fn:'openVaultModal()',admin:true}]]};
+const pageConfig={'dashboard':['Dashboard','Visao geral',[]],'chamados':['Chamados','Chamados',[{label:'+ Novo chamado',fn:'openTicketModal()'}]],'agenda':['Agenda','Calendario',[{label:'+ Nova atividade',fn:'openAgendaModal()'}]],'ordens':['Ordens de Servico','OS',[{label:'+ Nova OS',fn:"openWOModal()"}]],'escala':['Escala','Equipe',[]],'clientes':['Clientes','Clientes',[{label:'+ Novo cliente',fn:'openClientModal()'}]],'contratos':['Contratos','Contratos',[{label:'+ Novo contrato',fn:'openContractModal()'}]],'planos':['Planos','Planos',[{label:'+ Novo plano',fn:'openPlanModal()'}]],'servicos-avulsos':['Servicos Avulsos','Catalogo',[{label:'+ Novo servico',fn:'openServiceModal()',admin:true}]],'inventario':['Inventario TI','Equipamentos',[{label:'+ Equipamento',fn:'openInventoryModal()'}]],'prospeccao':['Prospeccao','Funil',[{label:'+ Novo lead',fn:'openProspectModal()'}]],'financeiro':['Financeiro','Financeiro',[{label:'+ Lancamento',fn:'openBillingModal()'}]],'relatorios':['Relatorios','Relatorios',[]],'nfse':['NFS-e','Notas',[]],'social-dashboard':['Redes Sociais','Painel',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-instagram':['Instagram','Instagram',[{label:'+ Post',fn:"openSocialPostModal('INSTAGRAM')"}]],'social-linkedin':['LinkedIn','LinkedIn',[{label:'+ Post',fn:"openSocialPostModal('LINKEDIN')"}]],'social-facebook':['Facebook','Facebook',[{label:'+ Post',fn:"openSocialPostModal('FACEBOOK')"}]],'usuarios':['Usuarios','Usuarios',[{label:'+ Novo usuario',fn:'openUserModal()',admin:true}]],'cofre':['Cofre','Cofre',[{label:'+ Credencial',fn:'openVaultModal()',admin:true}]]};
 function showPage(id,el){_currentPage=id;addReloadBtn();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));const page=document.getElementById('page-'+id);if(page)page.classList.add('active');if(el)el.classList.add('active');const cfg=pageConfig[id]||[id,'',''];document.getElementById('page-title').textContent=cfg[0];document.getElementById('page-sub').textContent=cfg[1];const actions=document.getElementById('topbar-actions');actions.querySelectorAll('.btn').forEach(b=>b.remove());(cfg[2]||[]).forEach(a=>{if(a.admin&&currentUserProfile?.role!=='ADMIN')return;const btn=document.createElement('button');btn.className='btn btn-primary';btn.textContent=a.label;btn.onclick=()=>eval(a.fn);actions.appendChild(btn);});const loaders={'dashboard':loadDashboard,'chamados':loadTickets,'agenda':()=>{renderAgendaCalendar();loadAgendaEvents();},'ordens':loadWorkOrders,'escala':loadScheduleData,'clientes':loadClients,'contratos':loadContracts,'planos':loadPlans,'servicos-avulsos':loadServicesCatalog,'inventario':loadInventory,'prospeccao':loadProspects,'financeiro':loadBillings,'relatorios':initReports,'nfse':loadNfse,'social-dashboard':loadSocialDashboard,'social-instagram':()=>loadSocialPosts('INSTAGRAM'),'social-linkedin':()=>loadSocialPosts('LINKEDIN'),'social-facebook':()=>loadSocialPosts('FACEBOOK'),'usuarios':loadUsers,'cofre':loadVault};if(loaders[id])loaders[id]();if(id==='agenda'){const nb=document.getElementById('agenda-notif-persistent');if(nb)nb.remove();}}
 function toggleGroup(id,el){const c=document.getElementById(id);if(!c)return;const o=c.classList.contains('open');c.classList.toggle('open',!o);if(el)el.classList.toggle('open',!o);}
 function fmtMoney(v){return'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -1995,18 +1995,18 @@ function openAgendaModal(){
   const myAuthId=currentUserProfile?.auth_id||currentUser?.id||'';
   populateUserSelect('ag-assigned',myAuthId);
   populateClientSelect('ag-client');
-  document.getElementById('ag-id').value='';
-  document.getElementById('ag-title').value='';
-  document.getElementById('ag-description').value='';
+  ['ag-id','ag-title','ag-description'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
   const now=new Date();now.setMinutes(0,0,0);
-  document.getElementById('ag-start').value=now.toISOString().slice(0,16);
-  document.getElementById('ag-end').value=new Date(now.getTime()+3600000).toISOString().slice(0,16);
-  document.getElementById('ag-modal-title').textContent='Nova Atividade';
-  const ts=document.getElementById('ag-type');
-  if(ts){
-    if(allAgendaTypes.length){ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');}
-    else{ts.innerHTML='<option value="">Sem tipo — crie um tipo primeiro</option>';}
-  }
+  const se=document.getElementById('ag-start'),ee=document.getElementById('ag-end');
+  if(se)se.value=now.toISOString().slice(0,16);
+  if(ee)ee.value=new Date(now.getTime()+3600000).toISOString().slice(0,16);
+  const tl=document.getElementById('ag-modal-title');if(tl)tl.textContent='Nova Atividade';
+  const populateTypes=()=>{
+    const ts=document.getElementById('ag-type');if(!ts)return;
+    if(allAgendaTypes&&allAgendaTypes.length)ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');
+    else ts.innerHTML='<option value="">Sem tipo — adicione em Tipos de Atividade</option>';
+  };
+  if(!allAgendaTypes||!allAgendaTypes.length){loadAgendaTypes().then(populateTypes);}else{populateTypes();}
   sb.from('tickets').select('id,title').neq('status','FECHADO').order('opened_at',{ascending:false}).limit(50).then(({data})=>{
     const tk=document.getElementById('ag-ticket');
     if(tk)tk.innerHTML='<option value="">Nenhum</option>'+(data||[]).map(t=>`<option value="${t.id}">${t.title}</option>`).join('');
@@ -2163,6 +2163,11 @@ function buildDefaultShiftsForDate(dateStr) {
 
 function getMemberInfo(name) { return TEAM_MEMBERS.find(m=>m.name===name)||{color:'#666',bg:'#eee'}; }
 
+// Returns exceptions that overlap a specific date
+function getExceptionsForDate(dateStr) {
+  return (schedExceptions||[]).filter(e => e.date_from <= dateStr && e.date_to >= dateStr);
+}
+
 async function loadScheduleData() {
   try {
     const {data:cfg} = await sb.from('schedule_config').select('key,value');
@@ -2196,15 +2201,21 @@ function scheduleNav(dir) {
 }
 
 function renderSchedule() {
+  const container = document.getElementById('schedule-grid-container');
+  const summaryEl = document.getElementById('schedule-summary');
+  const teamEl    = document.getElementById('team-config-list');
+  const labelEl   = document.getElementById('schedule-month-label');
+  if(!container) return; // page not visible yet
+
   const y = scheduleCurrentDate.getFullYear(), m = scheduleCurrentDate.getMonth();
-  document.getElementById('schedule-month-label').textContent =
+  if(labelEl) labelEl.textContent =
     new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).toUpperCase();
   const days = new Date(y,m+1,0).getDate();
   const wd = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
 
   // Build summary counters
   const summary = {};
-  TEAM_MEMBERS.forEach(m => summary[m.name] = {manha:0,tarde:0});
+  TEAM_MEMBERS.forEach(mb => summary[mb.name] = {manha:0,tarde:0});
 
   let rows = '';
   for(let d=1; d<=days; d++) {
@@ -2212,19 +2223,16 @@ function renderSchedule() {
     const dt = new Date(dateStr+'T12:00:00'), dow = dt.getDay(), isWE = dow===0||dow===6;
     const excList = getExceptionsForDate(dateStr);
     const ovData  = dayOverrides[dateStr];
-    const shifts  = ovData ? ovData.shifts : buildDefaultShiftsForDate(dateStr);
-    const teamOn  = isWE ? null : getTeamOnForDate(dateStr);
+    const shifts  = ovData ? (ovData.shifts||[]) : buildDefaultShiftsForDate(dateStr);
 
-    // Day label cell
     const dayBg = isWE ? '#F7F5EE' : '#F8FAFE';
     let row = `<tr>
       <td style="padding:5px 8px;border:1px solid var(--border);white-space:nowrap;background:${dayBg};font-size:11px">
         <strong>${String(d).padStart(2,'0')}</strong> <span style="color:var(--sub)">${wd[dow]}</span>
         ${ovData?'<span style="color:#0C447C;font-size:9px;margin-left:3px">[edit]</span>':''}
-        ${excList.length?'<span style="color:#A32D2D;font-size:9px;margin-left:2px">[!</span>]':''}
+        ${excList.length?'<span style="color:#A32D2D;font-size:9px;margin-left:2px">[!]</span>':''}
       </td>`;
 
-    // Build per-member cells
     TEAM_MEMBERS.forEach(member => {
       const excForMember = excList.filter(e=>e.member_name===member.name);
       if(excForMember.length) {
@@ -2239,49 +2247,45 @@ function renderSchedule() {
       myShifts.forEach(s=>{
         const isManha=s.start<'13:00';
         const cls=s.type==='transicao'?'sched-trans':(isManha?'sched-manha':'sched-tarde');
-        cellContent+=`<div class="sched-shift ${cls}" style="background:${getMemberInfo(member.name).bg};color:${getMemberInfo(member.name).color}" onclick="openDayEditModal('${dateStr}')" title="Clique para editar">${s.start}–${s.end}</div>`;
+        const mi=getMemberInfo(member.name);
+        cellContent+=`<div class="sched-shift ${cls}" style="background:${mi.bg};color:${mi.color}" onclick="openDayEditModal('${dateStr}')" title="Clique para editar">${s.start}–${s.end}</div>`;
         if(isManha) summary[member.name].manha=(summary[member.name].manha||0)+1;
         else summary[member.name].tarde=(summary[member.name].tarde||0)+1;
       });
       row+=`<td class="sched-cell">${cellContent}</td>`;
     });
-
     row += '</tr>';
     rows += row;
   }
 
   const thead = '<tr>'
     + `<th style="padding:6px 10px;background:#F7F5EE;border:1px solid var(--border);font-size:10px;text-align:left;min-width:70px">DIA</th>`
-    + TEAM_MEMBERS.map(m=>`<th style="padding:6px 10px;background:#F7F5EE;border:1px solid var(--border);font-size:11px;text-align:center;color:${m.color}">${m.name}</th>`).join('')
+    + TEAM_MEMBERS.map(mb=>`<th style="padding:6px 10px;background:#F7F5EE;border:1px solid var(--border);font-size:11px;text-align:center;color:${mb.color}">${mb.name}</th>`).join('')
     + '</tr>';
 
-  document.getElementById('schedule-grid-container').innerHTML =
+  container.innerHTML =
     `<table style="width:100%;border-collapse:collapse;font-size:11px"><thead>${thead}</thead><tbody>${rows}</tbody></table>`;
 
-  // Summary cards
-  document.getElementById('schedule-summary').innerHTML = TEAM_MEMBERS.map(m => {
-    const s = summary[m.name]||{};
+  if(summaryEl) summaryEl.innerHTML = TEAM_MEMBERS.map(mb => {
+    const s = summary[mb.name]||{};
     return `<div style="padding:10px 12px;border-bottom:1px solid #F1EFE8">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0"></div>
-        <strong style="color:${m.color}">${m.name}</strong>
+        <div style="width:10px;height:10px;border-radius:50%;background:${mb.color};flex-shrink:0"></div>
+        <strong style="color:${mb.color}">${mb.name}</strong>
       </div>
       <div style="font-size:11px;color:var(--sub)">
-        Manhas (9h-13h): ${s.manha||0} dias &nbsp;|&nbsp; Tardes (13h-18h): ${s.tarde||0} dias
+        Manhãs (9h–13h): ${s.manha||0} dias &nbsp;|&nbsp; Tardes (13h–18h): ${s.tarde||0} dias
       </div>
     </div>`;
   }).join('');
 
-  // Team config
-  document.getElementById('team-config-list').innerHTML = TEAM_MEMBERS.map(m => {
-    const role = m.team==='RW' ? 'Ciclo com Ruan+Wilson' : 'Ciclo oposto (Jefferson)';
+  if(teamEl) teamEl.innerHTML = TEAM_MEMBERS.map(mb => {
     return `<div style="padding:10px 12px;border-bottom:1px solid #F1EFE8;display:flex;align-items:center;gap:8px">
-      <div style="width:12px;height:12px;border-radius:50%;background:${m.color};flex-shrink:0"></div>
-      <div><strong>${m.name}</strong><div style="font-size:11px;color:var(--sub)">${role}</div></div>
+      <div style="width:12px;height:12px;border-radius:50%;background:${mb.color};flex-shrink:0"></div>
+      <div><strong>${mb.name}</strong><div style="font-size:11px;color:var(--sub)">Seg–Sex: 09h–13h ou 13h–18h alternado</div></div>
     </div>`;
   }).join('');
 
-  // Exceptions list
   loadExceptionsList();
 }
 
@@ -2444,7 +2448,34 @@ function loadExceptionsList() {
   </table></div>`;
 }
 
-async function loadPlans(){await loadAllPlans();const g=document.getElementById('plans-grid'),isA=currentUserProfile?.role==='ADMIN';if(!allPlans.length){g.innerHTML='<div class="empty"><div class="empty-text">Nenhum plano</div></div>';return;}g.innerHTML=allPlans.map(p=>`<div class="plan-card"><div class="plan-name">${p.name}</div><div class="plan-price">${fmtMoney(p.monthly_price)}<span style="font-size:12px;font-weight:400;color:var(--sub)">/mes</span></div><div class="plan-detail">PCs: ${p.max_pcs>=9999?'Ilimitado':p.max_pcs}</div><div class="plan-detail">Chamados: ${p.tickets_limit>=9999?'Ilimitado':p.tickets_limit}/mes</div>${p.description?`<div class="plan-detail" style="font-size:11px;color:var(--sub)">${p.description}</div>`:''}${!p.active?'<span class="badge badge-inativo">Inativo</span>':''}${isA?`<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-sm" onclick='openPlanEdit(${JSON.stringify(p)})'>Editar</button><button class="btn btn-sm btn-danger" onclick="withSave(this,()=>deletePlan('${p.id}'))">Excluir</button></div>`:''}</div>`).join('');const{data:cl}=await sb.from('clients').select('plan_id');const co={};(cl||[]).forEach(c=>{if(c.plan_id)co[c.plan_id]=(co[c.plan_id]||0)+1;});document.getElementById('plans-summary-body').innerHTML=allPlans.map(p=>`<tr><td>${p.name}</td><td>${co[p.id]||0}</td><td>${fmtMoney((co[p.id]||0)*Number(p.monthly_price))}</td></tr>`).join('');}
+async function loadPlans(){
+  await loadAllPlans();
+  const g=document.getElementById('plans-grid');
+  const isA=currentUserProfile?.role==='ADMIN'||currentUserProfile?.roles?.includes('ADMIN')||true; // always show edit in CRM context
+  if(!g)return;
+  if(!allPlans.length){g.innerHTML='<div class="empty"><div class="empty-text">Nenhum plano cadastrado</div></div>';return;}
+  g.innerHTML=allPlans.map(p=>{
+    const features=(p.features||'').split('\n').filter(f=>f.trim());
+    return`<div class="plan-card" style="${!p.active?'opacity:0.55':''}">
+      <div class="plan-name">${p.name}</div>
+      <div class="plan-price">${fmtMoney(p.monthly_price)}<span style="font-size:12px;font-weight:400;color:var(--sub)">/mês</span></div>
+      <div style="font-size:12px;color:var(--sub);margin:4px 0 8px">Até ${p.max_pcs>=9999?'ilimitados':p.max_pcs} PCs &nbsp;·&nbsp; ${p.tickets_limit>=9999?'Chamados ilim.':p.tickets_limit+' chamados/mês'}</div>
+      ${p.description?`<div style="font-size:11px;color:var(--sub);margin-bottom:8px;font-style:italic">${p.description}</div>`:''}
+      ${features.length?`<ul style="margin:0 0 8px;padding-left:16px;font-size:12px;color:var(--sub)">${features.map(f=>`<li style="margin-bottom:2px">${f.trim()}</li>`).join('')}</ul>`:''}
+      ${!p.active?'<span class="badge badge-inativo" style="margin-bottom:6px;display:inline-block">Inativo</span>':''}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn btn-sm btn-primary" onclick='openPlanEdit(${JSON.stringify(p)})'>✏ Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="withSave(this,()=>deletePlan('${p.id}'))">X Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+  const sb2=document.getElementById('plans-summary-body');
+  if(sb2){
+    const{data:cl}=await sb.from('clients').select('plan_id');
+    const co={};(cl||[]).forEach(c=>{if(c.plan_id)co[c.plan_id]=(co[c.plan_id]||0)+1;});
+    sb2.innerHTML=allPlans.map(p=>`<tr><td>${p.name}</td><td>${co[p.id]||0}</td><td>${fmtMoney((co[p.id]||0)*Number(p.monthly_price))}</td></tr>`).join('');
+  }
+}
 function openPlanModal(){['pl-name','pl-desc','pl-features'].forEach(f=>document.getElementById(f).value='');document.getElementById('pl-price').value='';document.getElementById('pl-pcs').value='';document.getElementById('pl-tickets').value='9999';document.getElementById('pl-active').checked=true;document.getElementById('pl-id').value='';document.getElementById('plan-modal-title').textContent='Novo Plano';openModal('modal-plan');}
 function openPlanEdit(p){document.getElementById('pl-id').value=p.id;document.getElementById('pl-name').value=p.name;document.getElementById('pl-price').value=p.monthly_price;document.getElementById('pl-pcs').value=p.max_pcs;document.getElementById('pl-tickets').value=p.tickets_limit;document.getElementById('pl-desc').value=p.description||'';document.getElementById('pl-features').value=p.features||'';document.getElementById('pl-active').checked=p.active;document.getElementById('plan-modal-title').textContent='Editar Plano';openModal('modal-plan');}
 async function savePlan(){const id=document.getElementById('pl-id').value;const p={name:document.getElementById('pl-name').value,monthly_price:parseFloat(document.getElementById('pl-price').value)||0,max_pcs:parseInt(document.getElementById('pl-pcs').value)||8,tickets_limit:parseInt(document.getElementById('pl-tickets').value)||9999,description:document.getElementById('pl-desc').value,features:document.getElementById('pl-features').value,active:document.getElementById('pl-active').checked};if(!p.name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('plans').update(p).eq('id',id));}else{({error:err}=await sb.from('plans').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-plan');toast('Plano salvo!','success');await loadAllPlans();loadPlans();}
