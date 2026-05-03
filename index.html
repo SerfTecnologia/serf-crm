@@ -1587,7 +1587,7 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function populateClientSelect(id,val='',withOutro=false){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Selecione...</option>'+allClients.map(c=>`<option value="${c.id}"${c.id===val?' selected':''}>${c.razao_social}</option>`).join('')+(withOutro?'<option value="__outro__">+ Outro (novo cliente)</option>':'');}
 function onTicketClientChange(){const v=document.getElementById('t-client').value;const outro=document.getElementById('t-client-outro');if(outro)outro.style.display=v==='__outro__'?'block':'none';}
-function populateUserSelect(id,val=''){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Selecione...</option>'+allUsers.map(u=>`<option value="${u.id}"${u.id===val?' selected':''}>${u.name}</option>`).join('');}
+function populateUserSelect(id,val=''){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Selecione...</option>'+allUsers.filter(u=>u.auth_id||u.id).map(u=>{const v=u.auth_id||u.id;return`<option value="${v}"${v===val?' selected':''}>${u.name||u.email}</option>`;}).join('');}
 function populatePlanSelect(id,val=''){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Sem plano</option>'+allPlans.map(p=>`<option value="${p.id}"${p.id===val?' selected':''}>${p.name}</option>`).join('');}
 async function loadAllClients(){const{data}=await sb.from('clients').select('id,razao_social,status,plan_id,cnpj,phone,email,address,contact_name,tickets_limit,phones').order('razao_social');allClients=data||[];}
 async function loadAllUsers(){const{data}=await sb.from('user_profiles').select('id,auth_id,name,email,role,roles,permissions').order('name');allUsers=data||[];}
@@ -1947,9 +1947,9 @@ function renderAgendaCalendar(){
   }
   const cellsEl=document.getElementById('agenda-cal-cells');
   if(cellsEl)cellsEl.innerHTML=cells;
-  // user filter
+  // user filter - use auth_id as that's what agenda.assigned_to stores
   const usel=document.getElementById('filter-agenda-user');
-  if(usel)usel.innerHTML='<option value="">Todos</option>'+allUsers.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(usel)usel.innerHTML='<option value="">Todos</option>'+allUsers.filter(u=>u.auth_id).map(u=>`<option value="${u.auth_id}">${u.name}</option>`).join('');
   renderAgendaTypes();
   // re-render day if selected
   if(agendaSelectedDate)renderAgendaDay();
@@ -1992,7 +1992,8 @@ function renderAgendaDay(){
 }
 
 function openAgendaModal(){
-  populateUserSelect('ag-assigned',currentUserProfile?.id||'');
+  const myAuthId=currentUserProfile?.auth_id||currentUser?.id||'';
+  populateUserSelect('ag-assigned',myAuthId);
   populateClientSelect('ag-client');
   document.getElementById('ag-id').value='';
   document.getElementById('ag-title').value='';
@@ -2001,16 +2002,11 @@ function openAgendaModal(){
   document.getElementById('ag-start').value=now.toISOString().slice(0,16);
   document.getElementById('ag-end').value=new Date(now.getTime()+3600000).toISOString().slice(0,16);
   document.getElementById('ag-modal-title').textContent='Nova Atividade';
-  // Populate type select
   const ts=document.getElementById('ag-type');
   if(ts){
-    if(allAgendaTypes.length){
-      ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');
-    } else {
-      ts.innerHTML='<option value="">Sem tipo</option>';
-    }
+    if(allAgendaTypes.length){ts.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');}
+    else{ts.innerHTML='<option value="">Sem tipo — crie um tipo primeiro</option>';}
   }
-  // Populate linked ticket
   sb.from('tickets').select('id,title').neq('status','FECHADO').order('opened_at',{ascending:false}).limit(50).then(({data})=>{
     const tk=document.getElementById('ag-ticket');
     if(tk)tk.innerHTML='<option value="">Nenhum</option>'+(data||[]).map(t=>`<option value="${t.id}">${t.title}</option>`).join('');
@@ -2040,6 +2036,7 @@ async function saveAgendaItem(){
   const typeId=document.getElementById('ag-type')?.value;
   const typeObj=allAgendaTypes.find(t=>t.id===typeId);
   const assignedTo=document.getElementById('ag-assigned').value||null;
+  const myAuthId=currentUserProfile?.auth_id||currentUser?.id;
   const p={
     title:document.getElementById('ag-title').value,
     description:document.getElementById('ag-description').value,
@@ -2047,19 +2044,19 @@ async function saveAgendaItem(){
     color:typeObj?.color||'#0C447C',
     start_datetime:document.getElementById('ag-start').value||null,
     end_datetime:document.getElementById('ag-end').value||null,
-    assigned_to:assignedTo,
+    assigned_to:assignedTo||null,
     client_id:document.getElementById('ag-client').value||null,
     ticket_id:document.getElementById('ag-ticket')?.value||null,
-    created_by:currentUserProfile?.id,
-    viewed_by:assignedTo&&assignedTo!==currentUserProfile?.id?[]:[currentUserProfile?.id]
+    created_by:myAuthId,
+    viewed_by:assignedTo&&assignedTo!==myAuthId?[]:[myAuthId].filter(Boolean)
   };
   if(!p.title)return toast('Titulo obrigatorio','error');
   let err;
   if(id){({error:err}=await sb.from('agenda').update(p).eq('id',id));}
   else{({error:err}=await sb.from('agenda').insert(p));}
-  if(err)return toast('Erro: '+err.message,'error');
+  if(err)return toast('Erro ao salvar: '+err.message,'error');
   closeModal('modal-agenda');
-  toast(id?'Atualizado!':'Criado!','success');
+  toast(id?'Atualizado!':'Atividade criada!','success');
   loadAgendaEvents();
 }
 async function deleteAgendaItem(id){if(!confirm('Excluir atividade?'))return;await sb.from('agenda').delete().eq('id',id);toast('Removido!','success');loadAgendaEvents();}
@@ -2068,7 +2065,18 @@ function openAgendaTypeEdit(t){document.getElementById('agt-id').value=t.id;docu
 async function saveAgendaType(){const id=document.getElementById('agt-id').value;const p={name:document.getElementById('agt-name').value,icon:document.getElementById('agt-icon').value,color:document.getElementById('agt-color').value,active:true};if(!p.name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('agenda_types').update(p).eq('id',id));}else{({error:err}=await sb.from('agenda_types').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-agenda-type');toast('Tipo salvo!','success');await loadAgendaTypes();renderAgendaTypes();}
 async function deleteAgendaType(id){if(!confirm('Excluir tipo?'))return;await sb.from('agenda_types').delete().eq('id',id);await loadAgendaTypes();renderAgendaTypes();toast('Excluido!','success');}
 async function markAgendaViewed(id){const e=agendaEvents.find(x=>x.id===id);if(!e||e.assigned_to!==currentUserProfile?.id)return;const v=Array.isArray(e.viewed_by)?e.viewed_by:[];if(!v.includes(currentUserProfile.id)){await sb.from('agenda').update({viewed_by:[...v,currentUserProfile.id]}).eq('id',id);loadAgendaEvents();}}
-async function checkAgendaNotifications(){if(!currentUserProfile)return;try{const{data}=await sb.from('agenda').select('id,viewed_by').eq('assigned_to',currentUserProfile.id).gte('start_datetime',new Date().toISOString()).limit(50);const unv=(data||[]).filter(e=>!Array.isArray(e.viewed_by)||!e.viewed_by.includes(currentUserProfile.id));const badge=document.getElementById('badge-agenda'),nc=document.getElementById('notif-count');if(unv.length){if(badge){badge.style.display='inline';badge.textContent=unv.length;}if(nc){nc.style.display='block';nc.textContent=unv.length;}}else{if(badge)badge.style.display='none';if(nc)nc.style.display='none';}}catch(e){console.warn('notif err',e);}}
+async function checkAgendaNotifications(){
+  if(!currentUserProfile)return;
+  const myAuthId=currentUserProfile.auth_id||currentUser?.id;
+  if(!myAuthId)return;
+  try{
+    const{data}=await sb.from('agenda').select('id,viewed_by').eq('assigned_to',myAuthId).gte('start_datetime',new Date().toISOString()).limit(50);
+    const unv=(data||[]).filter(e=>!Array.isArray(e.viewed_by)||!e.viewed_by.includes(myAuthId));
+    const badge=document.getElementById('badge-agenda'),nc=document.getElementById('notif-count');
+    if(unv.length){if(badge){badge.style.display='inline';badge.textContent=unv.length;}if(nc){nc.style.display='block';nc.textContent=unv.length;}}
+    else{if(badge)badge.style.display='none';if(nc)nc.style.display='none';}
+  }catch(e){console.warn('notif err',e);}
+}
 function renderAgendaTypes(){const el=document.getElementById('agenda-types-list');if(!el)return;if(!allAgendaTypes.length){el.innerHTML='<div style="padding:14px;font-size:12px;color:var(--sub);text-align:center">Nenhum tipo. Clique em + Tipo.</div>';return;}el.innerHTML=allAgendaTypes.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #F1EFE8"><span style="width:12px;height:12px;border-radius:50%;background:${t.color||'#0C447C'};display:inline-block;flex-shrink:0"></span><span style="font-size:13px;flex:1">${t.icon||''} ${t.name}</span><button class="btn btn-sm" onclick='openAgendaTypeEdit(${JSON.stringify(t)})'>E</button><button class="btn btn-sm btn-danger" onclick="deleteAgendaType('${t.id}')">X</button></div>`).join('');const sel=document.getElementById('ag-type');if(sel)sel.innerHTML=allAgendaTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.name}</option>`).join('');}
 async function loadWorkOrders(){const sf=document.getElementById('filter-wo-status')?.value||'';let q=sb.from('work_orders').select('*,clients(razao_social),user_profiles(name)').order('created_at',{ascending:false});if(sf)q=q.eq('status',sf);if(woTypeFilter)q=q.eq('os_type',woTypeFilter);const{data}=await q.limit(100);const el=document.getElementById('wo-list');if(!data?.length){el.innerHTML='<div class="empty"><div class="empty-text">Nenhuma OS</div></div>';return;}el.innerHTML=data.map(w=>`<div class="wo-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><span class="wo-type-badge wo-${(w.os_type||'servico').toLowerCase()}">${w.os_type||'SERVICO'}</span>${badgeStatus(w.status)}<span style="font-size:11px;color:var(--sub);margin-left:auto">${fmtDatetime(w.scheduled_at||w.created_at)}</span></div><div style="font-weight:600;font-size:13px">${w.title}</div><div style="font-size:12px;color:var(--sub)">${w.clients?.razao_social||'--'} | ${w.user_profiles?.name||'N/A'}</div>${w.description?`<div style="font-size:12px;margin-top:4px">${w.description}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm btn-primary" onclick='openWOEdit(${JSON.stringify(w)})'>Editar</button>${w.status!=='CONCLUIDA'?`<button class="btn btn-sm btn-success" onclick="concludeWO('${w.id}')">Concluir</button>`:''}<button class="btn btn-sm btn-danger" onclick="deleteWO('${w.id}')">Excluir</button></div></div>`).join('');}
 function filterWO(type,btn){woTypeFilter=type;document.querySelectorAll('#page-ordens .tab-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');loadWorkOrders();}
@@ -2156,25 +2164,29 @@ function buildDefaultShiftsForDate(dateStr) {
 function getMemberInfo(name) { return TEAM_MEMBERS.find(m=>m.name===name)||{color:'#666',bg:'#eee'}; }
 
 async function loadScheduleData() {
-  // Load config
-  const {data:cfg} = await sb.from('schedule_config').select('key,value');
-  if(cfg) {
-    cfg.forEach(r => {
-      if(r.key==='reference_date') schedRef.date = r.value;
-      if(r.key==='reference_team') schedRef.team = r.value||'Ruan';
-    });
+  try {
+    const {data:cfg} = await sb.from('schedule_config').select('key,value');
+    if(cfg) {
+      cfg.forEach(r => {
+        if(r.key==='reference_date') schedRef.date = r.value;
+        if(r.key==='reference_team') schedRef.team = r.value||'Ruan';
+      });
+    }
+    const y = scheduleCurrentDate.getFullYear(), m = scheduleCurrentDate.getMonth();
+    const monthKey = `${y}-${String(m+1).padStart(2,'0')}`;
+    const firstDay = `${monthKey}-01`;
+    const lastDay  = `${monthKey}-31`;
+    // Load overrides
+    const {data:ov} = await sb.from('schedule_day_override').select('*').like('date_key', monthKey+'-%');
+    dayOverrides = {};
+    (ov||[]).forEach(r => { dayOverrides[r.date_key] = {shifts: r.shifts, notes: r.notes}; });
+    // Load exceptions (date_from <= lastDay AND date_to >= firstDay)
+    const {data:exc} = await sb.from('schedule_exceptions').select('*')
+      .lte('date_from', lastDay).gte('date_to', firstDay);
+    schedExceptions = exc||[];
+  } catch(e) {
+    console.warn('Schedule load error:', e.message);
   }
-  // Load overrides for current month
-  const y = scheduleCurrentDate.getFullYear(), m = scheduleCurrentDate.getMonth();
-  const monthKey = `${y}-${String(m+1).padStart(2,'0')}`;
-  const {data:ov} = await sb.from('schedule_day_override').select('*').like('date_key', monthKey+'-%');
-  dayOverrides = {};
-  (ov||[]).forEach(r => { dayOverrides[r.date_key] = {shifts: r.shifts, notes: r.notes}; });
-  // Load exceptions
-  const firstDay = `${y}-${String(m+1).padStart(2,'0')}-01`;
-  const lastDay  = `${y}-${String(m+1).padStart(2,'0')}-31`;
-  const {data:exc} = await sb.from('schedule_exceptions').select('*').gte('date_to', firstDay).lte('date_from', lastDay);
-  schedExceptions = exc||[];
   renderSchedule();
 }
 
@@ -2435,7 +2447,7 @@ function loadExceptionsList() {
 async function loadPlans(){await loadAllPlans();const g=document.getElementById('plans-grid'),isA=currentUserProfile?.role==='ADMIN';if(!allPlans.length){g.innerHTML='<div class="empty"><div class="empty-text">Nenhum plano</div></div>';return;}g.innerHTML=allPlans.map(p=>`<div class="plan-card"><div class="plan-name">${p.name}</div><div class="plan-price">${fmtMoney(p.monthly_price)}<span style="font-size:12px;font-weight:400;color:var(--sub)">/mes</span></div><div class="plan-detail">PCs: ${p.max_pcs>=9999?'Ilimitado':p.max_pcs}</div><div class="plan-detail">Chamados: ${p.tickets_limit>=9999?'Ilimitado':p.tickets_limit}/mes</div>${p.description?`<div class="plan-detail" style="font-size:11px;color:var(--sub)">${p.description}</div>`:''}${!p.active?'<span class="badge badge-inativo">Inativo</span>':''}${isA?`<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-sm" onclick='openPlanEdit(${JSON.stringify(p)})'>Editar</button><button class="btn btn-sm btn-danger" onclick="withSave(this,()=>deletePlan('${p.id}'))">Excluir</button></div>`:''}</div>`).join('');const{data:cl}=await sb.from('clients').select('plan_id');const co={};(cl||[]).forEach(c=>{if(c.plan_id)co[c.plan_id]=(co[c.plan_id]||0)+1;});document.getElementById('plans-summary-body').innerHTML=allPlans.map(p=>`<tr><td>${p.name}</td><td>${co[p.id]||0}</td><td>${fmtMoney((co[p.id]||0)*Number(p.monthly_price))}</td></tr>`).join('');}
 function openPlanModal(){['pl-name','pl-desc','pl-features'].forEach(f=>document.getElementById(f).value='');document.getElementById('pl-price').value='';document.getElementById('pl-pcs').value='';document.getElementById('pl-tickets').value='9999';document.getElementById('pl-active').checked=true;document.getElementById('pl-id').value='';document.getElementById('plan-modal-title').textContent='Novo Plano';openModal('modal-plan');}
 function openPlanEdit(p){document.getElementById('pl-id').value=p.id;document.getElementById('pl-name').value=p.name;document.getElementById('pl-price').value=p.monthly_price;document.getElementById('pl-pcs').value=p.max_pcs;document.getElementById('pl-tickets').value=p.tickets_limit;document.getElementById('pl-desc').value=p.description||'';document.getElementById('pl-features').value=p.features||'';document.getElementById('pl-active').checked=p.active;document.getElementById('plan-modal-title').textContent='Editar Plano';openModal('modal-plan');}
-async function savePlan(){const id=document.getElementById('pl-id').value;const p={name:document.getElementById('pl-name').value,monthly_price:parseFloat(document.getElementById('pl-price').value)||0,max_pcs:parseInt(document.getElementById('pl-pcs').value)||8,tickets_limit:parseInt(document.getElementById('pl-tickets').value)||9999,description:document.getElementById('pl-desc').value,features:document.getElementById('pl-features').value,active:document.getElementById('pl-active').checked};if(!p.name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('plans').update(p).eq('id',id));}else{({error:err}=await sb.from('plans').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-plan');toast('Plano salvo!','success');}
+async function savePlan(){const id=document.getElementById('pl-id').value;const p={name:document.getElementById('pl-name').value,monthly_price:parseFloat(document.getElementById('pl-price').value)||0,max_pcs:parseInt(document.getElementById('pl-pcs').value)||8,tickets_limit:parseInt(document.getElementById('pl-tickets').value)||9999,description:document.getElementById('pl-desc').value,features:document.getElementById('pl-features').value,active:document.getElementById('pl-active').checked};if(!p.name)return toast('Nome obrigatorio','error');let err;if(id){({error:err}=await sb.from('plans').update(p).eq('id',id));}else{({error:err}=await sb.from('plans').insert(p));}if(err)return toast('Erro: '+err.message,'error');closeModal('modal-plan');toast('Plano salvo!','success');await loadAllPlans();loadPlans();}
 async function deletePlan(id){if(!confirm('Excluir plano?'))return;await sb.from('plans').delete().eq('id',id);toast('Excluido!','success');}
 function applyPlanDefaults(){const p=allPlans.find(x=>x.id===document.getElementById('c-plan-id').value);if(p)document.getElementById('c-tickets-limit').value=p.tickets_limit;}
 async function loadServicesCatalog(){await loadAllServices();const el=document.getElementById('services-catalog-list');if(!allServices.length){el.innerHTML='<div class="empty"><div class="empty-text">Nenhum servico cadastrado</div></div>';return;}const bc={};allServices.forEach(s=>{if(!bc[s.category])bc[s.category]=[];bc[s.category].push(s);});el.innerHTML=Object.entries(bc).map(([cat,svcs])=>`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;margin-bottom:8px">${cat}</div>${svcs.map(s=>`<div class="service-card" onclick='openServiceEdit(${JSON.stringify(s)})'><div><div style="font-weight:600;font-size:13px">${s.name}</div><div style="font-size:11px;color:var(--sub)">${s.description||''}${s.cnae_code?' | CNAE: '+s.cnae_code:''}</div></div><div style="text-align:right"><div style="font-weight:700;color:var(--accent)">${fmtMoney(s.unit_price)}/${s.unit_label||'un'}</div>${currentUserProfile?.role==='ADMIN'?`<button class="btn btn-sm btn-danger" style="margin-top:4px" onclick='event.stopPropagation();deleteService("${s.id}")'>X</button>`:''}</div></div>`).join('')}</div>`).join('');}
